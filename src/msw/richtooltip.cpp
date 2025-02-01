@@ -147,7 +147,7 @@ public:
         wxRichToolTipGenericImpl::SetTitleFont(font);
     }
 
-    virtual void ShowFor(wxWindow* win, const wxRect* rect) override
+    virtual wxWindow* ShowFor(wxWindow* win, const wxRect* rect) override
     {
         // TODO: We could use native tooltip control to show native balloon
         //       tooltips for any window but right now we use the simple
@@ -164,14 +164,14 @@ public:
                 ebt.pszText = m_message.wc_str();
                 ebt.ttiIcon = m_ttiIcon;
                 if ( Edit_ShowBalloonTip(GetHwndOf(text), &ebt) )
-                    return;
+                    return NULL;
             }
         }
 
         // Don't set m_canUseNative to false here, we could be able to use the
         // native tooltips if we're called for a different window the next
         // time.
-        wxRichToolTipGenericImpl::ShowFor(win, rect);
+        return wxRichToolTipGenericImpl::ShowFor(win, rect);
     }
 
 private:

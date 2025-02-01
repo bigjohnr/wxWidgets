@@ -234,6 +234,11 @@ void wxPopupTransientWindow::Init()
 
     m_handlerFocus = nullptr;
     m_handlerPopup = nullptr;
+
+// JR
+#if defined( __WXMAC__)
+    m_captureMouse = true;
+#endif
 }
 
 wxPopupTransientWindow::wxPopupTransientWindow(wxWindow *parent, int style)
@@ -419,7 +424,7 @@ bool wxPopupTransientWindow::Show( bool show )
 #endif
 
 #if defined( __WXMAC__)
-    if (show && m_child)
+    if (show && m_child && m_captureMouse) // JR && m_captureMouse
     {
         // Assume that the mouse is outside the popup to begin with
         m_child->CaptureMouse();
@@ -461,7 +466,8 @@ void wxPopupTransientWindow::OnIdle(wxIdleEvent& event)
                     m_child->ReleaseMouse();
                 }
             }
-            else // And we reacquire it as soon as the mouse goes outside.
+            // JR if( m_captureMouse ) only used with os x
+            else if( m_captureMouse ) // And we reacquire it as soon as the mouse goes outside.
             {
                 if ( !m_child->HasCapture() )
                 {

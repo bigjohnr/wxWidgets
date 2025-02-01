@@ -66,6 +66,11 @@ public:
                        const wxFont& titleFont_) :
         m_timer(this)
     {
+
+#if defined( __WXMAC__)
+        SetMouseCapture( false ); // JR Otherwise the first click is eaten when closing popup and associated ribbon button doesn't get click
+#endif
+
         Create(parent, wxFRAME_SHAPED);
 
         // Move to the display where it will be shown,
@@ -247,7 +252,7 @@ public:
 protected:
     virtual void OnDismiss() override
     {
-        Destroy();
+            Destroy();
     }
 
 private:
@@ -631,7 +636,7 @@ void wxRichToolTipGenericImpl::SetTitleFont(const wxFont& font)
     m_titleFont = font;
 }
 
-void wxRichToolTipGenericImpl::ShowFor(wxWindow* win, const wxRect* rect)
+wxWindow* wxRichToolTipGenericImpl::ShowFor(wxWindow* win, const wxRect* rect)
 {
     wxRichToolTipPopup* const popup = new wxRichToolTipPopup
                                           (
@@ -648,6 +653,8 @@ void wxRichToolTipGenericImpl::ShowFor(wxWindow* win, const wxRect* rect)
     popup->SetPosition(rect);
     // show or start the timer to delay showing the popup
     popup->SetTimeoutAndShow( m_timeout, m_delay );
+
+    return popup;
 }
 
 // Currently only wxMSW provides a native implementation.

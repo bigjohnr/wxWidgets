@@ -21,6 +21,7 @@ class WXDLLIMPEXP_FWD_CORE wxFont;
 class WXDLLIMPEXP_FWD_CORE wxWindow;
 
 class wxRichToolTipImpl;
+class wxRichToolTipInfo;
 
 // This enum describes the kind of the tip shown which combines both the tip
 // position and appearance because the two are related (when the tip is
@@ -57,6 +58,10 @@ public:
     // Ctor must specify the tooltip title and main message, additional
     // attributes can be set later.
     wxRichToolTip(const wxString& title, const wxString& message);
+    
+    // Construct using attributes set in wxRichToolTipInfo tipInfo.
+    // Additional attributes can be set or modified later.
+    wxRichToolTip(const wxRichToolTipInfo& tipInfo);
 
     // Set the background colour: if two colours are specified, the background
     // is drawn using a gradient from top to bottom, otherwise a single solid
@@ -87,7 +92,7 @@ public:
     void SetTitleFont(const wxFont& font);
 
     // Show the tooltip for the given window and optionally a specified area.
-    void ShowFor(wxWindow* win, const wxRect* rect = nullptr);
+    wxWindow* ShowFor(wxWindow* win, const wxRect* rect = nullptr);
 
     // Non-virtual dtor as this class is not supposed to be derived from.
     ~wxRichToolTip();
@@ -96,6 +101,67 @@ private:
     wxRichToolTipImpl* const m_impl;
 
     wxDECLARE_NO_COPY_CLASS(wxRichToolTip);
+};
+
+// ----------------------------------------------------------------------------
+// wxRichToolTipInfo: class to store wxRichToolTip settings
+//                    to avoid setting for each tooltip instance
+// ----------------------------------------------------------------------------
+
+#include "wx/icon.h"
+
+class WXDLLIMPEXP_ADV wxRichToolTipInfo
+{
+public:
+    wxRichToolTipInfo();
+    wxRichToolTipInfo( const wxString& title, 
+                       const wxString& message,
+                       int icon = wxICON_INFORMATION );
+
+    void SetTitleAndMessage( const wxString& title, const wxString& message );
+    void SetTitle( const wxString& title )          { m_title = title; }    
+    void SetMessage( const wxString& message )      { m_message = message; }    
+    void SetBackgroundColour( const wxColour &col, 
+                              const wxColour &colEnd = wxColour() );
+    
+    void SetTimes( unsigned millisecondsTimeout, unsigned millisecondsDelay );
+    void SetTipKind( wxTipKind tipKind )            { m_tipKind = tipKind; }
+    
+    void SetTitleFont( const wxFont &font )         { m_font = font; }
+    void SetIcon( int icon = wxICON_INFORMATION )   { m_iconId = icon; }
+    void SetIcon( const wxIcon &icon )              { m_icon = icon; }
+
+    wxString GetTitle() const               { return m_title; }
+    wxString GetMessage() const             { return m_message; }
+
+    wxTipKind GetTipKind() const            { return m_tipKind; }
+
+    unsigned GetTimeout() const             { return m_timeOut; }
+    unsigned GetDelay() const               { return m_timeDelay; }
+
+    wxColour GetBackgroundColour() const    { return m_colourStart; }
+    wxColour GetBackgroundEndColour() const { return m_colourEnd; }
+
+    wxFont GetTitleFont() const             { return m_font; }
+
+    int GetStandardIcon() const             { return m_iconId; }
+    wxIcon GetCustomIcon() const            { return m_icon; }
+
+private:
+    wxString    m_title,
+                m_message;
+
+    unsigned    m_iconId,
+                m_timeOut,
+                m_timeDelay;
+
+    wxIcon      m_icon;
+    wxColour    m_colourStart,
+                m_colourEnd;
+
+    wxFont      m_font;
+
+    wxTipKind   m_tipKind;
 };
 
 #endif // wxUSE_RICHTOOLTIP

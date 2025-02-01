@@ -180,6 +180,12 @@ protected:
     // get alerted when child gets deleted from under us
     void OnDestroy(wxWindowDestroyEvent& event);
 
+//JR set to true to prevent tip capturing mouse
+#if defined( __WXMAC__)
+    void SetMouseCapture( bool capture = true ) { m_captureMouse = capture; }
+    bool m_captureMouse;
+#endif
+    
 #if defined(__WXMAC__) && wxOSX_USE_COCOA_OR_CARBON
     // Check if the mouse needs to be captured or released: we must release
     // when it's inside our window if we want the embedded controls to work.

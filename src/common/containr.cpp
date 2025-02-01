@@ -122,12 +122,13 @@ bool wxControlContainerBase::DoSetFocus()
     wxWindow *win = wxWindow::FindFocus();
     while ( win )
     {
+#ifndef __WXMAC__
         if ( win == m_winParent )
         {
             // our child already has focus, don't take it away from it
             return true;
         }
-
+#endif
         if ( win->IsTopLevel() )
         {
             // don't look beyond the first top level parent - useless and

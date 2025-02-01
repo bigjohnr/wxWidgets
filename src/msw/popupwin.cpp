@@ -90,7 +90,7 @@ WXDWORD wxPopupWindow::MSWGetStyle(long flags, WXDWORD *exstyle) const
     if ( exstyle )
     {
         // a popup window floats on top of everything
-        *exstyle |= WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
+        *exstyle |= WS_EX_TOOLWINDOW; // WS_EX_TOPMOST | 
     }
 
     return style;

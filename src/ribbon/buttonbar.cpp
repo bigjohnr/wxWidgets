@@ -27,6 +27,7 @@
 
 wxDEFINE_EVENT(wxEVT_RIBBONBUTTONBAR_CLICKED, wxRibbonButtonBarEvent);
 wxDEFINE_EVENT(wxEVT_RIBBONBUTTONBAR_DROPDOWN_CLICKED, wxRibbonButtonBarEvent);
+wxDEFINE_EVENT(wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED, wxRibbonButtonBarEvent);
 
 wxIMPLEMENT_DYNAMIC_CLASS(wxRibbonButtonBarEvent, wxCommandEvent);
 wxIMPLEMENT_CLASS(wxRibbonButtonBar, wxRibbonControl);
@@ -223,6 +224,7 @@ public:
     wxString label;
     wxString help_string;
     wxCoord text_min_width[3];
+    wxRichToolTipInfo m_richTipInfo;
 
     // Index of the bitmap in the wxRibbonBar normal image list. Notice that
     // the disabled bitmap is in the next position, so this one is always even.
@@ -786,6 +788,38 @@ void wxRibbonButtonBar::SetArtProvider(wxRibbonArtProvider* art)
     Realize();
 }
 
+#if wxUSE_RICHTOOLTIP
+
+void wxRibbonButtonBar::SetRichToolTipInfo( wxRibbonButtonBarButtonBase* tool, 
+                                            const wxRichToolTipInfo& richTipInfo )
+{
+    wxCHECK_RET( tool, "Invalid wxRibbonToolBarToolBase* tool" );
+    tool->m_richTipInfo = richTipInfo;
+}
+
+void wxRibbonButtonBar::SetRichToolTipInfo( int button_id, 
+                                            const wxRichToolTipInfo& richTipInfo )
+{
+    wxRibbonButtonBarButtonBase* tool = GetItemById(button_id);
+    wxCHECK_RET( tool, "Invalid tool_id" );
+    tool->m_richTipInfo = richTipInfo;
+}
+
+const wxRichToolTipInfo& wxRibbonButtonBar::GetRichToolTipInfo( wxRibbonButtonBarButtonBase* tool )
+{
+   // wxCHECK_MSG( tool, const wxRichToolTipInfo(), "Invalid tool" );
+    return tool->m_richTipInfo;
+}
+
+const wxRichToolTipInfo& wxRibbonButtonBar::GetRichToolTipInfo( int button_id )
+{
+    wxRibbonButtonBarButtonBase* tool = GetItemById(button_id);
+    //wxCHECK_MSG( tool, const wxRichToolTipInfo(), "Invalid tool_id" );
+    return tool->m_richTipInfo;
+}
+
+#endif
+
 bool wxRibbonButtonBar::IsSizingContinuous() const
 {
     return false;
@@ -1239,6 +1273,7 @@ void wxRibbonButtonBar::TryCollapseLayout(wxRibbonButtonBarLayout* original,
 void wxRibbonButtonBar::OnMouseMove(wxMouseEvent& evt)
 {
     wxPoint cursor(evt.GetPosition());
+    wxRect rectTipButton;
     wxRibbonButtonBarButtonInstance* new_hovered = nullptr;
     wxRibbonButtonBarButtonInstance* tooltipButton = nullptr;
     long new_hovered_state = 0;
@@ -1268,10 +1303,12 @@ void wxRibbonButtonBar::OnMouseMove(wxMouseEvent& evt)
                 {
                     new_hovered_state |= wxRIBBON_BUTTONBAR_BUTTON_DROPDOWN_HOVERED;
                 }
+                rectTipButton = btn_rect;
                 break;
             }
             else if (m_show_tooltips_for_disabled)
             {
+                rectTipButton = btn_rect;
                 tooltipButton = &instance;
             }
         }
@@ -1291,6 +1328,26 @@ void wxRibbonButtonBar::OnMouseMove(wxMouseEvent& evt)
 #else
     wxUnusedVar(tooltipButton);
 #endif
+
+    if( !tooltipButton )
+    {
+        wxRibbonButtonBarEvent notification( wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED, wxNOT_FOUND );
+        notification.SetEventObject(this);
+        notification.SetBar(this);
+        ProcessEvent(notification);
+    }
+
+    else if( tooltipButton != m_hovered_button )
+    {
+        SetToolTip(tooltipButton->base->help_string);
+
+        wxRibbonButtonBarEvent notification( wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED, tooltipButton->base->id );
+        notification.SetEventObject(this);
+        notification.SetBar(this);
+        notification.SetButton(tooltipButton->base);
+        notification.SetRect(rectTipButton);
+        ProcessEvent(notification);
+    }
 
     if(new_hovered != m_hovered_button || (m_hovered_button != nullptr &&
         new_hovered_state != m_hovered_button->base->state))
@@ -1371,6 +1428,12 @@ void wxRibbonButtonBar::OnMouseDown(wxMouseEvent& evt)
             }
         }
     }
+
+    wxRibbonButtonBarEvent notification( wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED, wxNOT_FOUND );
+    notification.SetEventObject(this);
+    notification.SetBar(this);
+    ProcessEvent(notification);
+
 }
 
 void wxRibbonButtonBar::OnMouseUp(wxMouseEvent& evt)
@@ -1447,6 +1510,12 @@ void wxRibbonButtonBar::OnMouseLeave(wxMouseEvent& WXUNUSED(evt))
         m_active_button->base->state &= ~wxRIBBON_BUTTONBAR_BUTTON_ACTIVE_MASK;
         repaint = true;
     }
+
+    wxRibbonButtonBarEvent notification( wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED, wxNOT_FOUND );
+    notification.SetEventObject(this);
+    notification.SetBar(this);
+    ProcessEvent(notification);
+
     if(repaint)
         Refresh(false);
 }

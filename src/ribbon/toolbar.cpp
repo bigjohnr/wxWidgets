@@ -17,6 +17,10 @@
 #include "wx/ribbon/bar.h"
 #include "wx/dcbuffer.h"
 
+#if wxUSE_RICHTOOLTIP
+    #include "wx/richtooltip.h"
+#endif
+
 #ifndef WX_PRECOMP
 #endif
 
@@ -30,6 +34,10 @@ class wxRibbonToolBarToolBase
 {
 public:
     wxString help_string;
+
+#if wxUSE_RICHTOOLTIP
+    wxRichToolTipInfo m_richTipInfo;
+#endif
     wxBitmap bitmap;
     wxBitmap bitmap_disabled;
     wxRect dropdown;
@@ -56,6 +64,7 @@ public:
 
 wxDEFINE_EVENT(wxEVT_RIBBONTOOLBAR_CLICKED, wxRibbonToolBarEvent);
 wxDEFINE_EVENT(wxEVT_RIBBONTOOLBAR_DROPDOWN_CLICKED, wxRibbonToolBarEvent);
+wxDEFINE_EVENT(wxEVT_RIBBONTOOLBAR_HOVER_CHANGED, wxRibbonToolBarEvent);
 
 wxIMPLEMENT_DYNAMIC_CLASS(wxRibbonToolBarEvent, wxCommandEvent);
 wxIMPLEMENT_CLASS(wxRibbonToolBar, wxRibbonControl);
@@ -594,6 +603,37 @@ void wxRibbonToolBar::SetToolHelpString(int tool_id, const wxString& helpString)
     tool->help_string = helpString;
 }
 
+#if wxUSE_RICHTOOLTIP
+void wxRibbonToolBar::SetRichToolTipInfo( wxRibbonToolBarToolBase* tool, 
+                                          const wxRichToolTipInfo& richTipInfo )
+{
+    wxCHECK_RET( tool, "Invalid wxRibbonToolBarToolBase* tool" );
+    tool->m_richTipInfo = richTipInfo;
+}
+
+void wxRibbonToolBar::SetRichToolTipInfo( int button_id, 
+                                          const wxRichToolTipInfo& richTipInfo )
+{
+    wxRibbonToolBarToolBase* tool = FindById( button_id );
+    wxCHECK_RET( tool, "Invalid tool_id" );
+    tool->m_richTipInfo = richTipInfo;
+}
+
+const wxRichToolTipInfo& wxRibbonToolBar::GetRichToolTipInfo( wxRibbonToolBarToolBase* tool )
+{
+    //wxCHECK_MSG( tool, NULL, "Invalid wxRibbonToolBarToolBase* tool" );
+    return tool->m_richTipInfo;
+}
+
+const wxRichToolTipInfo& wxRibbonToolBar::GetRichToolTipInfo( int tool_id )
+{
+    wxRibbonToolBarToolBase* tool = FindById( tool_id );
+    //wxCHECK_MSG( tool, NULL, "Invalid tool_id" );
+    return tool->m_richTipInfo;
+}
+
+#endif
+
 void wxRibbonToolBar::SetToolNormalBitmap(int tool_id, const wxBitmap &bitmap)
 {
     wxRibbonToolBarToolBase* tool = FindById(tool_id);
@@ -1054,13 +1094,14 @@ void wxRibbonToolBar::OnMouseMove(wxMouseEvent& evt)
     wxPoint pos(evt.GetPosition());
     wxRibbonToolBarToolBase *new_hover = nullptr;
 
+    wxPoint pointGroupPosition; // JR
+
     size_t group_count = m_groups.GetCount();
     size_t g, t;
     for(g = 0; g < group_count; ++g)
     {
         wxRibbonToolBarToolGroup* group = m_groups.Item(g);
-        if(group->position.x <= pos.x && pos.x < group->position.x + group->size.x
-            && group->position.y <= pos.y && pos.y < group->position.y + group->size.y)
+        if( wxRect( group->position, group->size ).Contains( pos ) )
         {
             size_t tool_count = group->tools.GetCount();
             pos -= group->position;
@@ -1072,6 +1113,7 @@ void wxRibbonToolBar::OnMouseMove(wxMouseEvent& evt)
                 {
                     pos -= tool->position;
                     new_hover = tool;
+                    pointGroupPosition = group->position; // JR
                     break;
                 }
             }
@@ -1091,6 +1133,34 @@ void wxRibbonToolBar::OnMouseMove(wxMouseEvent& evt)
         UnsetToolTip();
     }
 #endif
+
+    if( new_hover && new_hover != m_hover_tool )
+    {
+        wxRibbonToolBarEvent notification( wxEVT_RIBBONTOOLBAR_HOVER_CHANGED, new_hover->id );
+        notification.SetEventObject(this);
+        notification.SetBar(this);
+
+        // calculate a rect for show position
+        wxPoint point(  pointGroupPosition.x + 
+                        new_hover->position.x,
+                        pointGroupPosition.y + 
+                        new_hover->position.y );
+        notification.SetRect( wxRect( point, new_hover->size ) );
+        ProcessEvent(notification);
+    }
+    else if( !new_hover )
+    {
+        wxRibbonToolBarEvent notification( wxEVT_RIBBONTOOLBAR_HOVER_CHANGED, wxNOT_FOUND );
+        notification.SetEventObject(this);
+        notification.SetBar(this);
+        ProcessEvent(notification);
+    }
+
+    if(new_hover && new_hover->state & wxRIBBON_TOOLBAR_TOOL_DISABLED)
+    {
+        m_hover_tool = new_hover;
+        new_hover = nullptr; // A disabled tool can not be hilighted
+    }
 
     if(new_hover != m_hover_tool)
     {
@@ -1151,6 +1221,11 @@ void wxRibbonToolBar::OnMouseDown(wxMouseEvent& evt)
         UnsetToolTip();
         Refresh(false);
     }
+
+    wxRibbonToolBarEvent notification( wxEVT_RIBBONTOOLBAR_HOVER_CHANGED, wxNOT_FOUND );
+    notification.SetEventObject(this);
+    notification.SetBar(this);
+    ProcessEvent(notification);
 }
 
 void wxRibbonToolBar::OnMouseLeave(wxMouseEvent& WXUNUSED(evt))
@@ -1161,6 +1236,11 @@ void wxRibbonToolBar::OnMouseLeave(wxMouseEvent& WXUNUSED(evt))
         m_hover_tool = nullptr;
         Refresh(false);
     }
+
+    wxRibbonToolBarEvent notification( wxEVT_RIBBONTOOLBAR_HOVER_CHANGED, wxNOT_FOUND );
+    notification.SetEventObject(this);
+    notification.SetBar(this);
+    ProcessEvent(notification);
 }
 
 void wxRibbonToolBar::OnMouseUp(wxMouseEvent& WXUNUSED(evt))

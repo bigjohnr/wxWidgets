@@ -397,6 +397,7 @@ void wxHtmlHelpController::MakeModalIfNeeded()
         else if (dialog && (m_FrameStyle & wxHF_MODAL))
         {
             dialog->ShowModal();
+            dialog->Close();
         }
     }
 }

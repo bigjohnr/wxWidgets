@@ -17,6 +17,10 @@
 #include "wx/ribbon/control.h"
 #include "wx/dynarray.h"
 
+#if wxUSE_RICHTOOLTIP
+    #include "wx/richtooltip.h"
+#endif
+
 class wxRibbonButtonBar;
 class wxRibbonButtonBarButtonBase;
 class wxRibbonButtonBarLayout;
@@ -167,6 +171,17 @@ public:
     void SetShowToolTipsForDisabled(bool show);
     bool GetShowToolTipsForDisabled() const;
 
+#if wxUSE_RICHTOOLTIP
+    void SetRichToolTipInfo( wxRibbonButtonBarButtonBase* tool, 
+                             const wxRichToolTipInfo& richTipInfo );
+
+    void SetRichToolTipInfo( int button_id,
+                             const wxRichToolTipInfo& richTipInfo );
+
+    const wxRichToolTipInfo& GetRichToolTipInfo( wxRibbonButtonBarButtonBase* tool );
+    const wxRichToolTipInfo& GetRichToolTipInfo( int button_id );
+#endif
+
 protected:
     friend class wxRibbonButtonBarEvent;
     virtual wxSize DoGetBestSize() const override;
@@ -232,11 +247,14 @@ public:
 
     wxRibbonButtonBar* GetBar() {return m_bar;}
     wxRibbonButtonBarButtonBase *GetButton() { return m_button; }
+    wxRect GetRect() { return m_rect; }
     void SetBar(wxRibbonButtonBar* bar) {m_bar = bar;}
     void SetButton(wxRibbonButtonBarButtonBase* button) { m_button = button; }
+    void SetRect(wxRect rect) { m_rect = rect; }
     bool PopupMenu(wxMenu* menu);
 
 protected:
+    wxRect m_rect;
     wxRibbonButtonBar* m_bar = nullptr;
     wxRibbonButtonBarButtonBase* m_button = nullptr;
 
@@ -250,6 +268,7 @@ private:
 
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_RIBBON, wxEVT_RIBBONBUTTONBAR_CLICKED, wxRibbonButtonBarEvent);
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_RIBBON, wxEVT_RIBBONBUTTONBAR_DROPDOWN_CLICKED, wxRibbonButtonBarEvent);
+wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_RIBBON, wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED, wxRibbonButtonBarEvent);
 
 typedef void (wxEvtHandler::*wxRibbonButtonBarEventFunction)(wxRibbonButtonBarEvent&);
 
@@ -260,15 +279,19 @@ typedef void (wxEvtHandler::*wxRibbonButtonBarEventFunction)(wxRibbonButtonBarEv
     wx__DECLARE_EVT1(wxEVT_RIBBONBUTTONBAR_CLICKED, winid, wxRibbonButtonBarEventHandler(fn))
 #define EVT_RIBBONBUTTONBAR_DROPDOWN_CLICKED(winid, fn) \
     wx__DECLARE_EVT1(wxEVT_RIBBONBUTTONBAR_DROPDOWN_CLICKED, winid, wxRibbonButtonBarEventHandler(fn))
+#define EVT_RIBBONBUTTONBAR_HOVERED(winid, fn) \
+     wx__DECLARE_EVT1(wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED, winid, wxRibbonButtonBarEventHandler(fn))
 #else
 
 // wxpython/swig event work
 %constant wxEventType wxEVT_RIBBONBUTTONBAR_CLICKED;
 %constant wxEventType wxEVT_RIBBONBUTTONBAR_DROPDOWN_CLICKED;
+%constant wxEventType wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED;
 
 %pythoncode {
     EVT_RIBBONBUTTONBAR_CLICKED = wx.PyEventBinder( wxEVT_RIBBONBUTTONBAR_CLICKED, 1 )
     EVT_RIBBONBUTTONBAR_DROPDOWN_CLICKED = wx.PyEventBinder( wxEVT_RIBBONBUTTONBAR_DROPDOWN_CLICKED, 1 )
+    EVT_RIBBONBUTTONBAR_HOVER_CHANGED = wx.PyEventBinder( wxEVT_RIBBONBUTTONBAR_HOVER_CHANGED, 1 )
 }
 #endif
 

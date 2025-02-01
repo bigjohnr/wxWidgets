@@ -26,6 +26,48 @@
 #endif // WX_PRECOMP
 
 #include "wx/private/richtooltip.h"
+#include "wx/generic/private/richtooltip.h"
+
+// ============================================================================
+// wxRichToolTipInfo implementation
+// ============================================================================
+
+wxRichToolTipInfo::wxRichToolTipInfo()
+{
+}
+
+wxRichToolTipInfo::wxRichToolTipInfo( const wxString& title, 
+                       const wxString& message,
+                       int icon )
+                       :m_title( title ),
+                       m_message( message ),
+                       m_iconId( icon ),
+                       m_timeOut( 5000 ),
+                       m_timeDelay( 0 ),
+                       m_tipKind( wxTipKind_Auto )
+ {
+ }
+
+void wxRichToolTipInfo::SetTitleAndMessage( const wxString& title, 
+                                            const wxString& message )
+{
+    m_title = title;
+    m_message = message;
+}
+
+void wxRichToolTipInfo::SetBackgroundColour( const wxColour &colour, 
+                                             const wxColour &colourEnd )
+{
+    m_colourStart = colour;
+    m_colourEnd = colourEnd;
+}
+
+void wxRichToolTipInfo::SetTimes( unsigned millisecondsTimeout, 
+                                  unsigned millisecondsDelay )
+{
+    m_timeOut = millisecondsTimeout;
+    m_timeDelay = millisecondsDelay;
+}
 
 // ============================================================================
 // implementation
@@ -35,6 +77,31 @@ wxRichToolTip::wxRichToolTip(const wxString& title,
                              const wxString& message) :
     m_impl(wxRichToolTipImpl::Create(title, message))
 {
+}
+
+wxRichToolTip::wxRichToolTip( const wxRichToolTipInfo& tipInfo )
+             : m_impl( wxRichToolTipImpl::Create( tipInfo.GetTitle(), 
+                                                  tipInfo.GetMessage() ) )
+{
+    // overwrite defaults set in wxRichToolTipImpl Create
+    SetTipKind( tipInfo.GetTipKind() ); 
+    SetTimeout( tipInfo.GetTimeout(), tipInfo.GetDelay() );
+
+    if ( tipInfo.GetTitleFont().IsOk() )
+        SetTitleFont( tipInfo.GetTitleFont() );
+
+    SetIcon( tipInfo.GetStandardIcon() );
+
+    if ( tipInfo.GetCustomIcon().IsOk() )
+        SetIcon( tipInfo.GetCustomIcon() );
+
+    if ( tipInfo.GetBackgroundColour().IsOk() )
+    {
+        if ( tipInfo.GetBackgroundEndColour().IsOk() )
+            SetBackgroundColour( tipInfo.GetBackgroundColour(), tipInfo.GetBackgroundEndColour() );
+        else
+            SetBackgroundColour( tipInfo.GetBackgroundColour() );
+    }
 }
 
 void
@@ -69,11 +136,11 @@ void wxRichToolTip::SetTitleFont(const wxFont& font)
     m_impl->SetTitleFont(font);
 }
 
-void wxRichToolTip::ShowFor(wxWindow* win, const wxRect* rect)
+wxWindow* wxRichToolTip::ShowFor(wxWindow* win, const wxRect* rect)
 {
-    wxCHECK_RET( win, wxS("Must have a valid window") );
+    wxCHECK_MSG( win, NULL, wxS("Must have a valid window") );
 
-    m_impl->ShowFor(win, rect);
+    return m_impl->ShowFor(win, rect);
 }
 
 wxRichToolTip::~wxRichToolTip()
