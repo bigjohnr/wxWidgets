@@ -45,6 +45,10 @@ Changes in behaviour not resulting in compilation errors
   values from the CSS standard. Use wxColourDatabase::UseScheme() to revert to
   using the traditional values if your application appearance depends on them.
 
+- Default art provider (theme) used by wxAuiNotebook has changed. Set the art
+  provider to wxAuiNativeTabArt in the code or use "native" in XRC to switch
+  to the previously used default theme.
+
 - As first mentioned in 3.0 release notes, the value of wxTHREAD_WAIT_DEFAULT,
   used by wxThread::Delete() and Wait() by default, has changed from
   wxTHREAD_WAIT_YIELD to wxTHREAD_WAIT_BLOCK for safety and consistency.
@@ -121,12 +125,29 @@ Changes in behaviour not resulting in compilation errors
   under all platforms instead of behaving as SetValue() under MSW and doing
   nothing elsewhere.
 
+- If you have a custom class deriving from wxAuiGenericTabArt, possibly
+  indirectly, e.g. via wxAuiMSWTabArt, you need to update it to override the
+  new virtual functions DrawPageTab() and GetPageTabSize() instead of
+  overriding the old DrawTab() and GetTabSize(). Note that this is not needed
+  if your class inherits directly from wxAuiTabArt, as it will continue to work
+  in this case (but switching to the new functions is still recommended).
+
 - The meaning of page index in wxAuiNotebook has changed if the pages have
   been reordered (see wxAUI_NB_TAB_MOVE) and now always refers to the page
   logical index, which is not affected by reordering. To get the position of
   the page on screen, which doesn't make sense without reference to the tab
   control containing it, use GetPagePosition() to retrieve both of them.
 
+- wxListbook and wxChoicebook now interpret (but ignore) mnemonics in their
+  page titles, just as the other wx*book classes already did. Double "&"
+  in the page text if it should be interpreted as a literal "&".
+
+- wxAUI_MGR_HINT_FADE is not included in default wxAuiManager style any longer,
+  please add it explicitly if you really want to use it.
+
+- Behaviour of wxPrintDialogData::SetAllPages() and SetSelection() has
+  changed when called with "false" argument, please review the documentation
+  and update your code if you called them with "false" (which is rarely done).
 
 Changes in behaviour which may result in build errors
 -----------------------------------------------------

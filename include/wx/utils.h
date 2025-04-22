@@ -15,7 +15,6 @@
 // ----------------------------------------------------------------------------
 
 #include "wx/object.h"
-#include "wx/list.h"
 #include "wx/filefn.h"
 #include "wx/versioninfo.h"
 #include "wx/meta/implicitconversion.h"
@@ -47,8 +46,6 @@ class WXDLLIMPEXP_FWD_BASE wxArrayInt;
     #include <dirent.h>
     #include <unistd.h>
 #endif
-
-#include <stdio.h>
 
 #include <unordered_map>
 
@@ -121,7 +118,7 @@ WXDLLIMPEXP_CORE void wxBell();
 WXDLLIMPEXP_CORE void wxInfoMessageBox(wxWindow* parent);
 #endif // wxUSE_MSGDLG
 
-WXDLLIMPEXP_CORE wxVersionInfo wxGetLibraryVersionInfo();
+WXDLLIMPEXP_BASE wxVersionInfo wxGetLibraryVersionInfo();
 
 // Get OS description as a user-readable string
 WXDLLIMPEXP_BASE wxString wxGetOsDescription();

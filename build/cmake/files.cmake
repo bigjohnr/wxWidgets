@@ -34,6 +34,7 @@ set(BASE_UNIX_AND_DARWIN_HDR
 set(BASE_UNIX_AND_DARWIN_NOTWXMAC_SRC
     ${BASE_UNIX_AND_DARWIN_SRC}
     src/unix/mimetype.cpp
+    src/unix/uilocale.cpp
 )
 
 set(BASE_UNIX_AND_DARWIN_NOTWXMAC_HDR
@@ -46,7 +47,6 @@ set(BASE_UNIX_SRC
     src/unix/fswatcher_inotify.cpp
     src/unix/secretstore.cpp
     src/unix/stdpaths.cpp
-    src/unix/uilocale.cpp
 )
 
 set(BASE_UNIX_HDR
@@ -114,7 +114,7 @@ set(BASE_COREFOUNDATION_SRC
     src/osx/core/secretstore.cpp
     src/osx/core/strconv_cf.cpp
     src/osx/cocoa/utils_base.mm
-    src/osx/core/uilocale.mm
+    src/osx/cocoa/stdpaths.mm
 )
 
 set(BASE_COREFOUNDATION_HDR
@@ -133,14 +133,15 @@ set(BASE_COREFOUNDATION_HDR
     wx/osx/core/joystick.h
     wx/osx/core/mimetype.h
     wx/osx/core/dataview.h
+    wx/osx/cocoa/stdpaths.h
 )
 
 set(BASE_OSX_SHARED_SRC
     src/osx/core/mimetype.cpp
     src/osx/fswatcher_fsevents.cpp
-    src/osx/cocoa/stdpaths.mm
     ${BASE_COREFOUNDATION_SRC}
     ${BASE_UNIX_AND_DARWIN_SRC}
+    src/osx/core/uilocale.mm
 )
 
 set(BASE_OSX_SHARED_HDR
@@ -185,6 +186,10 @@ set(QT_WIN32_SRC
     src/msw/dialup.cpp
     src/msw/dib.cpp
     src/msw/joystick.cpp
+    src/msw/power.cpp
+    src/msw/filedlg.cpp
+    src/msw/dirdlg.cpp
+    src/msw/utilswin.cpp
 )
 
 set(QT_WIN32_HDR
@@ -196,6 +201,8 @@ set(QT_WIN32_HDR
     wx/msw/sound.h
     wx/msw/ole/oleutils.h
     wx/msw/ole/comimpl.h
+    wx/msw/filedlg.h
+    wx/msw/dirdlg.h
 )
 
 set(QT_HDR
@@ -393,14 +400,6 @@ set(QT_SRC
 
 set(MEDIA_QT_SRC
     src/qt/mediactrl.cpp
-)
-
-set(OPENGL_QT_HDR
-    wx/qt/glcanvas.h
-)
-
-set(OPENGL_QT_SRC
-    src/qt/glcanvas.cpp
 )
 
 set(BASE_CMN_SRC
@@ -2219,7 +2218,6 @@ set(OSX_COCOA_HDR
     wx/osx/cocoa/chkconf.h
     wx/osx/cocoa/evtloop.h
     wx/osx/cocoa/private.h
-    wx/osx/cocoa/stdpaths.h
     wx/generic/region.h
     wx/osx/activityindicator.h
     wx/osx/datectrl.h
@@ -2445,12 +2443,8 @@ set(MEDIA_UNIX_HDR
 set(MEDIA_GTK_SRC
 )
 
-set(HTML_MSW_SRC
-    src/msw/helpbest.cpp
-    src/html/chm.cpp
-)
-
 set(HTML_CMN_SRC
+    src/html/chm.cpp
     src/html/helpctrl.cpp
     src/html/helpdata.cpp
     src/html/helpdlg.cpp
@@ -2479,10 +2473,6 @@ set(HTML_CMN_SRC
     src/generic/htmllbox.cpp
 )
 
-set(HTML_MSW_HDR
-    wx/msw/helpbest.h
-)
-
 set(HTML_CMN_HDR
     wx/html/forcelnk.h
     wx/html/helpctrl.h
@@ -2506,35 +2496,38 @@ set(HTML_CMN_HDR
     wx/htmllbox.h
 )
 
-set(WEBVIEW_MSW_SRC
-    src/msw/webview_ie.cpp
-    src/msw/webview_edge.cpp
+set(HTML_MSW_SRC
+    src/msw/helpbest.cpp
+)
+
+set(HTML_MSW_HDR
+    wx/msw/helpbest.h
 )
 
 set(WEBVIEW_CMN_SRC
-    src/common/webview.cpp
+    src/common/webview_chromium.cpp
     src/common/webviewarchivehandler.cpp
     src/common/webviewfshandler.cpp
-    src/common/webview_chromium.cpp
-)
-
-set(WEBVIEW_MSW_HDR
-    wx/msw/webviewhistoryitem_ie.h
-    wx/msw/webview_ie.h
-    wx/msw/webview_edge.h
+    src/common/webview.cpp
 )
 
 set(WEBVIEW_CMN_HDR
-    wx/webview.h
-    wx/webviewarchivehandler.h
-    wx/webviewfshandler.h
-    wx/webview_chromium.h
     wx/webview_chromium_impl.h
+    wx/webviewarchivehandler.h
+    wx/webview_chromium.h
+    wx/webview.h
+    wx/webviewfshandler.h
 )
 
-set(WEBVIEW_OSX_SHARED_HDR
-    wx/osx/webviewhistoryitem_webkit.h
-    wx/osx/webview_webkit.h
+set(WEBVIEW_MSW_SRC
+    src/msw/webview_edge.cpp
+    src/msw/webview_ie.cpp
+)
+
+set(WEBVIEW_MSW_HDR
+    wx/msw/webview_ie.h
+    wx/msw/webview_edge.h
+    wx/msw/webviewhistoryitem_ie.h
 )
 
 set(WEBVIEW_OSX_SHARED_SRC
@@ -2542,32 +2535,23 @@ set(WEBVIEW_OSX_SHARED_SRC
     src/osx/webview_chromium.mm
 )
 
-set(WEBVIEW_GTK_HDR
-    wx/gtk/webviewhistoryitem_webkit.h
-    wx/gtk/webview_webkit.h
+set(WEBVIEW_OSX_SHARED_HDR
+    wx/osx/webviewhistoryitem_webkit.h
+    wx/osx/webview_webkit.h
 )
 
 set(WEBVIEW_GTK_SRC
     src/gtk/webview_webkit.cpp
+    src/gtk/webview_webkit2.cpp
 )
 
-set(WEBVIEW2_GTK_SRC
-    src/gtk/webview_webkit2.cpp
+set(WEBVIEW_GTK_HDR
+    wx/gtk/webview_webkit.h
+    wx/gtk/webviewhistoryitem_webkit.h
 )
 
 set(WEBVIEW_WEBKIT2_EXTENSION_SRC
     src/gtk/webview_webkit2_extension.cpp
-)
-
-set(WEBVIEWCHROMIUM_HDR
-    wx/webview.h
-    wx/webview_chromium.h
-)
-set(WEBVIEWCHROMIUM_SRC
-    src/common/webview_chromium.cpp
-)
-set(WEBVIEWCHROMIUM_OSX_SHARED_SRC
-    src/osx/webview_chromium.mm
 )
 
 set(XRC_SRC
@@ -2759,9 +2743,35 @@ set(OPENGL_OSX_COCOA_SRC
     src/osx/glcanvas_osx.cpp
 )
 
+set(OPENGL_OSX_COCOA_HDR
+    wx/osx/glcanvas.h
+)
+
 set(OPENGL_OSX_IPHONE_SRC
     src/osx/iphone/glcanvas.mm
     src/osx/glcanvas_osx.cpp
+)
+
+set(OPENGL_OSX_IPHONE_HDR
+    wx/osx/glcanvas.h
+)
+
+set(OPENGL_X11_SRC
+    src/x11/glcanvas.cpp
+    src/unix/glx11.cpp
+)
+
+set(OPENGL_X11_HDR
+    wx/x11/glcanvas.h
+    wx/unix/glx11.h
+)
+
+set(OPENGL_QT_SRC
+    src/qt/glcanvas.cpp
+)
+
+set(OPENGL_QT_HDR
+    wx/qt/glcanvas.h
 )
 
 set(UNIX_SOUND_SDL_SRC
@@ -2794,14 +2804,14 @@ set(AUI_CMN_HDR
     wx/aui/serializer.h
 )
 
-set(AUI_MSW_HDR
-    wx/aui/tabartmsw.h
-    wx/aui/barartmsw.h
-)
-
 set(AUI_MSW_SRC
     src/aui/tabartmsw.cpp
     src/aui/barartmsw.cpp
+)
+
+set(AUI_MSW_HDR
+    wx/aui/tabartmsw.h
+    wx/aui/barartmsw.h
 )
 
 set(AUI_GTK_SRC

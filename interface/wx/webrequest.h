@@ -15,6 +15,9 @@
     (e.g. HTTP/2, TLS 1.3).
     System-wide configuration like proxy and SSL certificates will be used
     when possible.
+    When using libcurl backend, environment variables `CURL_CA_BUNDLE`,
+    `SSL_CERT_FILE` and `SSL_CERT_DIR` are used to change the trusted
+    certificates location if they are defined.
 
     Instances of wxWebRequest are created by using
     wxWebSession::CreateRequest().
@@ -553,6 +556,14 @@ public:
 
     To handle authentication with this class the username and password must be
     specified in the URL itself and wxWebAuthChallenge is not used with it.
+
+    @note Any reserved characters (see RFC 3986) in the username or password
+        must be percent encoded. wxURI::SetUserAndPassword() can be used to
+        ensure that this is done correctly.
+
+    @note macOS backend using NSURLSession doesn't handle encoded characters in
+        the password (but does handle them in the username). Async wxWebSession
+        must be used if you need to support them under this platform.
 
     @see wxWebRequest
 

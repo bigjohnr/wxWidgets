@@ -349,6 +349,17 @@ private:
 
 namespace
 {
+struct InsertTextData
+{
+    // VS14.0 refuses to compile code that uses initializer list to create objects
+    // of this struct: InsertTextData{_somevalue_}; // VS14.0 rejects this
+    explicit InsertTextData(unsigned long len) : lenOfInsertedText(len)
+    {
+    }
+
+    unsigned long lenOfInsertedText = 0;
+    unsigned long oldMaximumLength = 0;
+};
 
 // This stack stores the length of the text being currently inserted into the
 // current control.
@@ -358,7 +369,7 @@ namespace
 // time (but possibly more than into one, if wxEVT_TEXT event handler does
 // something that results in another text control update), and we don't want to
 // waste space in every wxTextCtrl object for this field unnecessarily.
-wxStack<int> gs_lenOfInsertedText;
+wxStack<InsertTextData> gs_insertTextData;
 
 } // anonymous namespace
 
@@ -1144,8 +1155,7 @@ wxString wxTextCtrl::GetRTFValue() const
     buffer.reserve(GetLastPosition() * 2);
 
     // Use a EDITSTREAMCALLBACK to stream text out from the control.
-    EDITSTREAM es{ 0 };
-    es.dwError = 0;
+    EDITSTREAM es = { };
     es.pfnCallback = MSWEditStreamOutCallback;
     // our callback will write to a char buffer (i.e., std::string)
     es.dwCookie = reinterpret_cast<DWORD_PTR>(&buffer);
@@ -1174,7 +1184,7 @@ void wxTextCtrl::SetRTFValue(const wxString& val)
 {
     wxCHECK_RET(IsRich(), "RTF support is only available for rich controls!");
 
-    SETTEXTEX textInfo{ 0 };
+    SETTEXTEX textInfo = { };
     textInfo.flags = ST_DEFAULT | ST_UNICODE;
     textInfo.codepage = 1200;
 
@@ -1292,17 +1302,19 @@ void wxTextCtrl::DoWriteText(const wxString& value, int flags)
 
     // Remember the length of the text we're inserting so that
     // AdjustSpaceLimit() could adjust the limit to be big enough for it:
-    // and also signal us whether it did it by resetting it to 0.
-    gs_lenOfInsertedText.push(valueDos.length());
+    // and also signal us whether it did it by setting the oldMaximumLength field.
+    // Notice that the cast is needed because length() returns unsigned long long
+    // under x64 systems.
+    gs_insertTextData.push(InsertTextData(static_cast<unsigned long>(valueDos.length())));
 
     ::SendMessage(GetHwnd(), selectionOnly ? EM_REPLACESEL : WM_SETTEXT,
                   // EM_REPLACESEL takes 1 to indicate the operation should be redoable
                   selectionOnly ? 1 : 0, wxMSW_CONV_LPARAM(valueDos));
 
-    const int lenActuallyInserted = gs_lenOfInsertedText.top();
-    gs_lenOfInsertedText.pop();
+    const auto oldMaxLength = gs_insertTextData.top().oldMaximumLength;
+    gs_insertTextData.pop();
 
-    if ( lenActuallyInserted == -1 )
+    if ( oldMaxLength > 0 )
     {
         // Text size limit has been hit and added text has been truncated.
         // But the max length has been increased by the EN_MAXTEXT message
@@ -1313,6 +1325,8 @@ void wxTextCtrl::DoWriteText(const wxString& value, int flags)
 
         ::SendMessage(GetHwnd(), selectionOnly ? EM_REPLACESEL : WM_SETTEXT,
                       selectionOnly ? 1 : 0, wxMSW_CONV_LPARAM(valueDos));
+
+        SetMaxLength(oldMaxLength); // Restore the old max length
     }
 
     if ( !ucf.GotUpdate() && (flags & SetValue_SendEvent) )
@@ -2571,8 +2585,11 @@ bool wxTextCtrl::HasSpaceLimit(unsigned int *len) const
 bool wxTextCtrl::AdjustSpaceLimit()
 {
     unsigned int limit;
-    if ( HasSpaceLimit(&limit) )
+    if ( HasSpaceLimit(&limit) && gs_insertTextData.empty() )
+    {
+        // Do nothing if the text is entered interactively.
         return false;
+    }
 
     unsigned int len = ::GetWindowTextLength(GetHwnd());
     if ( len >= limit )
@@ -2583,12 +2600,13 @@ bool wxTextCtrl::AdjustSpaceLimit()
         // it too many times make sure that we make it at least big enough to
         // fit all the text we are currently inserting into the control, if
         // we're inserting any, i.e. if we're called from DoWriteText().
-        if ( !gs_lenOfInsertedText.empty() )
+        if ( !gs_insertTextData.empty() )
         {
-            increaseBy = gs_lenOfInsertedText.top();
+            auto& data = gs_insertTextData.top();
+            increaseBy = data.lenOfInsertedText;
 
-            // Indicate to the caller that we increased the limit.
-            gs_lenOfInsertedText.top() = -1;
+            // Save the old max length (will be restored in DoWriteText())
+            data.oldMaximumLength = limit;
         }
         else // Not inserting text, must be text actually typed by user.
         {

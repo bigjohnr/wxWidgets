@@ -110,7 +110,7 @@ void wxCursor::InitFromStock( wxStockCursor cursorId )
     {
     case wxCURSOR_BLANK:
     {
-        GetHandle() = QBitmap();
+        GetHandle() = QCursor();
         return;
     }
 //    case wxCURSOR_ARROW:
@@ -179,5 +179,5 @@ wxGDIRefData *wxCursor::CreateGDIRefData() const
 
 wxGDIRefData *wxCursor::CloneGDIRefData(const wxGDIRefData *data) const
 {
-    return new wxCursorRefData(*(wxCursorRefData *)data);
+    return new wxCursorRefData(*static_cast<const wxCursorRefData*>(data));
 }

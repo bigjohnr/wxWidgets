@@ -55,10 +55,14 @@ enum wxImageResizeQuality
     /**
         Default image resizing algorithm used by wxImage::Scale().
 
-        Currently this is the same as wxIMAGE_QUALITY_NEAREST when enlarging
-        the image (in at least one direction) and wxIMAGE_QUALITY_BILINEAR when
-        reducing it, which produces relatively good results for the images
-        typically used for the icons in the GUI applications.
+        Currently this algorithm uses wxIMAGE_QUALITY_BILINEAR when reducing
+        the image size (in both directions) to resize the image to an integer
+        multiple of the target size and, after doing this, or as the only step
+        when enlarging the image, applies wxIMAGE_QUALITY_BOX_AVERAGE to obtain
+        the desired size.
+
+        This produces relatively good results for the images typically used for
+        the icons in the GUI applications.
     */
     wxIMAGE_QUALITY_NORMAL,
 
@@ -877,9 +881,15 @@ public:
         For a description of the @a quality parameter, see the Scale() function.
         Returns the (modified) image itself.
 
+        Overload taking wxSize is only available since wxWidgets 3.3.0.
+
         @see Scale()
     */
     wxImage& Rescale(int width, int height,
+                     wxImageResizeQuality quality = wxIMAGE_QUALITY_NORMAL);
+
+    /// @overload
+    wxImage& Rescale(const wxSize& size,
                      wxImageResizeQuality quality = wxIMAGE_QUALITY_NORMAL);
 
     /**
@@ -1008,10 +1018,16 @@ public:
         for 32-bit programs. For 64-bit programs the limit is 2^48 and so not
         relevant in practice.
 
+        The overload taking a wxSize is only available since wxWidgets 3.3.0.
+
         @see Rescale()
     */
     wxImage Scale(int width, int height,
                    wxImageResizeQuality quality = wxIMAGE_QUALITY_NORMAL) const;
+
+    /// @overload
+    wxImage Scale(const wxSize& size,
+                  wxImageResizeQuality quality = wxIMAGE_QUALITY_NORMAL) const;
 
     /**
         Returns a resized version of this image without scaling it by adding either a

@@ -43,6 +43,8 @@
 #include "wx/thread.h"
 #include "wx/stdpaths.h"
 
+#include "wx/private/safecall.h"
+
 #if wxUSE_EXCEPTIONS
     #include <exception>        // for std::current_exception()
     #include <utility>          // for std::swap()
@@ -426,7 +428,10 @@ bool wxAppConsoleBase::ProcessIdle()
     // synthesize an idle event and check if more of them are needed
     wxIdleEvent event;
     event.SetEventObject(this);
-    ProcessEvent(event);
+
+    // Don't let exceptions propagate from the user-defined handler, we may be
+    // called from an extern "C" callback (e.g. this is the case in wxGTK).
+    SafelyProcessEvent(event);
 
 #if wxUSE_LOG
     // flush the logged messages if any (do this after processing the events
@@ -697,6 +702,25 @@ void wxAppConsoleBase::OnUnhandledException()
         what,
         wxIsMainThread() ? "the application" : "the thread in which it happened"
     );
+}
+
+/* static */
+void wxAppConsoleBase::CallOnUnhandledException()
+{
+    if ( wxTheApp )
+    {
+        wxSafeCall<void>([]()
+        {
+            wxTheApp->OnUnhandledException();
+        }, []()
+        {
+            // And OnUnhandledException() absolutely shouldn't throw,
+            // but we still must account for the possibility that it
+            // did. At least show some information about the exception
+            // in this case by calling our, non-overridden version.
+            wxTheApp->wxAppConsoleBase::OnUnhandledException();
+        });
+    }
 }
 
 // ----------------------------------------------------------------------------

@@ -4354,12 +4354,12 @@ wxGtkTreeModelNode *wxDataViewCtrlInternal::FindNode( const wxDataViewItem &item
     }
 
     wxGtkTreeModelNode * node = m_root;
-    for ( const auto& item : list )
+    for ( const auto& itm : list )
     {
         wxGtkTreeModelNode* next = nullptr;
         for (auto child : node->GetNodes())
         {
-            if (child->GetItem() == item)
+            if (child->GetItem() == itm)
             {
                 next = child;
                 break;
@@ -4394,6 +4394,9 @@ wxGtkTreeModelNode *wxDataViewCtrlInternal::FindNode( GtkTreeIter *iter )
 wxGtkTreeModelNode *wxDataViewCtrlInternal::FindParentNode( const wxDataViewItem &item )
 {
     wxCHECK_MSG( m_wx_model, nullptr, "no associated model?" );
+
+    if ( !item.IsOk() )
+        return nullptr;
 
     return FindNode( m_wx_model->GetParent(item) );
 }
