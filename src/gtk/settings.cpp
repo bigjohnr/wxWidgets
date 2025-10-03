@@ -18,6 +18,7 @@
     #include "wx/module.h"
 #endif
 
+#include "wx/display.h"
 #include "wx/fontutil.h"
 #include "wx/fontenum.h"
 
@@ -33,7 +34,7 @@
     #include "wx/gtk/private/variant.h"
 #endif
 
-bool wxGetFrameExtents(GdkWindow* window, int* left, int* right, int* top, int* bottom);
+bool wxGetFrameExtents(GdkWindow* window, wxTopLevelWindow::DecorSize* decorSize);
 
 // ----------------------------------------------------------------------------
 // wxSystemSettings implementation
@@ -763,6 +764,7 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
         }
         wxFALLTHROUGH;
 #endif
+    case wxSYS_COLOUR_GRIDLINES:
     case wxSYS_COLOUR_3DLIGHT:
     case wxSYS_COLOUR_ACTIVEBORDER:
     case wxSYS_COLOUR_BTNFACE:
@@ -920,6 +922,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
         case wxSYS_COLOUR_ACTIVEBORDER:
         case wxSYS_COLOUR_INACTIVEBORDER:
         case wxSYS_COLOUR_BTNFACE:
+        case wxSYS_COLOUR_GRIDLINES:
         //case wxSYS_COLOUR_3DFACE:
         case wxSYS_COLOUR_3DLIGHT:
             color = wxColor(ButtonStyle()->bg[GTK_STATE_NORMAL]);
@@ -1217,17 +1220,17 @@ int wxSystemSettingsNative::GetMetric( wxSystemMetric index, const wxWindow* win
                     // Get the frame extents from the windowmanager.
                     // In most cases the top extent is the titlebar, so we use the bottom extent
                     // for the heights.
-                    int right, bottom;
-                    if (wxGetFrameExtents(window, nullptr, &right, nullptr, &bottom))
+                    wxTopLevelWindow::DecorSize decorSize;
+                    if (wxGetFrameExtents(window, &decorSize))
                     {
                         switch (index)
                         {
                             case wxSYS_BORDER_X:
                             case wxSYS_EDGE_X:
                             case wxSYS_FRAMESIZE_X:
-                                return right; // width of right extent
+                                return decorSize.right;
                             default:
-                                return bottom; // height of bottom extent
+                                return decorSize.bottom;
                         }
                     }
                 }
@@ -1237,9 +1240,17 @@ int wxSystemSettingsNative::GetMetric( wxSystemMetric index, const wxWindow* win
 
         case wxSYS_CURSOR_X:
         case wxSYS_CURSOR_Y:
+            {
+                gint cursor_size = 0;
+                g_object_get(GetSettingsForWindowScreen(window),
+                                "gtk-cursor-theme-size", &cursor_size, nullptr);
+                if (cursor_size)
+                    return cursor_size;
+
                 return gdk_display_get_default_cursor_size(
                             window ? gdk_window_get_display(window)
                                    : gdk_display_get_default());
+            }
 
         case wxSYS_DCLICK_X:
         case wxSYS_DCLICK_Y:
@@ -1357,10 +1368,10 @@ int wxSystemSettingsNative::GetMetric( wxSystemMetric index, const wxWindow* win
             // titlebar is, but this might lead to interesting behaviours in used code.
             // Reconsider when we have a way to report to the user on which side it is.
             {
-                int top;
-                if (wxGetFrameExtents(window, nullptr, nullptr, &top, nullptr))
+                wxTopLevelWindow::DecorSize decorSize;
+                if (wxGetFrameExtents(window, &decorSize))
                 {
-                    return top; // top frame extent
+                    return decorSize.top;
                 }
             }
 

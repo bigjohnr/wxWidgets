@@ -112,7 +112,6 @@ public:
 
     virtual void SetWindowStyleFlag(long style) override;
     virtual void SetExtraStyle(long exStyle) override;
-    virtual bool SetCursor( const wxCursor &cursor ) override;
     virtual bool SetFont( const wxFont &font ) override;
 
     virtual bool IsTransparentBackgroundSupported(wxString* reason = nullptr) const override;
@@ -207,6 +206,8 @@ public:
 
     // implementation from now on
     // ==========================
+
+    virtual void WXUpdateCursor() override;
 
     // event handlers
     // --------------
@@ -553,13 +554,9 @@ public:
     virtual bool IsDoubleBuffered() const override;
 
     // Ensure that neither this window itself nor any of its parents use
-    // WS_EX_COMPOSITED: this is used by the native wxListCtrl which is
-    // incompatible with this style.
+    // WS_EX_COMPOSITED: this may only be necessary after calling
+    // SetDoubleBuffered() which sets this style.
     void MSWDisableComposited();
-
-    // This function is called for all child windows when compositing is
-    // disabled for their parent.
-    virtual void MSWOnDisabledComposited() { }
 
     // synthesize a wxEVT_LEAVE_WINDOW event and set m_mouseInWindow to false
     void GenerateMouseLeave();
@@ -575,10 +572,6 @@ public:
 
     // Find the menu corresponding to the given handle.
     virtual wxMenu* MSWFindMenuFromHMENU(WXHMENU hMenu);
-
-    // Find the the current menu item using the given handle and the item id
-    virtual wxMenuItem* MSWFindMenuItemFromHMENU(WXHMENU hMenu, int nItem);
-
 #endif // wxUSE_MENUS && !__WXUNIVERSAL__
 
     // Return the default button for the TLW containing this window or nullptr if

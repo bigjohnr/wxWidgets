@@ -62,6 +62,9 @@ struct testData {
     unsigned bitDepth;
 } g_testfiles[] =
 {
+#if wxUSE_LIBWEBP
+    { "horse.webp", wxBITMAP_TYPE_WEBP, 24 },
+#endif // wxUSE_LIBWEBP
     { "horse.ico", wxBITMAP_TYPE_ICO, 4 },
     { "horse.xpm", wxBITMAP_TYPE_XPM, 8 },
     { "horse.png", wxBITMAP_TYPE_PNG, 24 },
@@ -98,6 +101,9 @@ ImageHandlersInit::ImageHandlersInit()
     ms_initialized = true;
 
     // the formats we're going to test:
+#if wxUSE_LIBWEBP
+    wxImage::AddHandler(new wxWEBPHandler);
+#endif // wxUSE_LIBWEBP
     wxImage::AddHandler(new wxICOHandler);
     wxImage::AddHandler(new wxXPMHandler);
     wxImage::AddHandler(new wxPNGHandler);
@@ -825,8 +831,7 @@ TEST_CASE_METHOD(ImageHandlersInit, "wxImage::CompareLoadedImage", "[image]")
 
     for (size_t i=0; i<WXSIZEOF(g_testfiles); i++)
     {
-        if ( !(g_testfiles[i].bitDepth == 8 || g_testfiles[i].bitDepth == 24)
-            || g_testfiles[i].type == wxBITMAP_TYPE_JPEG /*skip lossy JPEG*/)
+        if ( !(g_testfiles[i].bitDepth == 8 || g_testfiles[i].bitDepth == 24))
         {
             continue;
         }
@@ -840,9 +845,19 @@ TEST_CASE_METHOD(ImageHandlersInit, "wxImage::CompareLoadedImage", "[image]")
 
 
         wxINFO_FMT("Compare test '%s' for loading", g_testfiles[i].file);
-        CHECK_THAT( actual,
-                    RGBSameAs(g_testfiles[i].bitDepth == 8 ? expected8
-                                                           : expected24) );
+        wxImage & expected = g_testfiles[i].bitDepth == 8 ? expected8 : expected24;
+        int tolerance = 0;
+        switch (g_testfiles[i].type)
+        {
+            case wxBITMAP_TYPE_JPEG:
+            case wxBITMAP_TYPE_WEBP:
+                tolerance = 42; // lossy formats can have a substantial difference
+                // this value has been chosen to be okay for the existing JPEG sample
+                break;
+            default:
+                tolerance = 0; // all other formats must match exactly
+        }
+        CHECK_THAT( actual, RGBSimilarTo( expected, tolerance ) );
     }
 
 }
@@ -884,7 +899,8 @@ void CompareImage(const wxImageHandler& handler, const wxImage& image,
         return;
     }
 
-    if (type == wxBITMAP_TYPE_JPEG /* skip lossy JPEG */)
+    if (type == wxBITMAP_TYPE_JPEG /* skip lossy JPEG */
+        || type == wxBITMAP_TYPE_WEBP /* skip lossy WebP */)
     {
         return;
     }
@@ -1051,6 +1067,34 @@ TEST_CASE_METHOD(ImageHandlersInit, "wxImage::SavePNG", "[image]")
     CompareImage(*wxImage::FindHandler(wxBITMAP_TYPE_PNG),
         expected8, wxIMAGE_HAVE_ALPHA);
 
+}
+
+static void TestPNGDescription(const wxString& description)
+{
+    wxImage image("horse.png");
+
+    image.SetOption(wxIMAGE_OPTION_PNG_DESCRIPTION, description);
+    wxMemoryOutputStream memOut;
+    REQUIRE(image.SaveFile(memOut, wxBITMAP_TYPE_PNG));
+
+    wxMemoryInputStream memIn(memOut);
+    REQUIRE(image.LoadFile(memIn));
+
+    CHECK(image.GetOption(wxIMAGE_OPTION_PNG_DESCRIPTION) == description);
+}
+
+TEST_CASE_METHOD(ImageHandlersInit, "wxImage::PNGDescription", "[image]")
+{
+    // Test writing a description and reading it back.
+    TestPNGDescription("Providing the PNG a pneumatic puma as a present");
+
+    // Test writing and reading a description again but with non-ASCII characters.
+    TestPNGDescription("Тестирование 테스트 一 二 三");
+
+    // Test writing and reading a description again but with a long description.
+    TestPNGDescription(wxString(wxT('a'), 256)
+        + wxString(wxT('b'), 256)
+        + wxString(wxT('c'), 256));
 }
 
 #if wxUSE_LIBTIFF
@@ -2490,10 +2534,10 @@ static wxSize ParseEnvVarAsSize(const wxString& varname)
     REQUIRE( wxGetEnv(varname, &sizeStr) );
 
     wxString heightStr;
-    unsigned width;
+    unsigned width = 0;
     REQUIRE( sizeStr.BeforeFirst(',', &heightStr).ToUInt(&width) );
 
-    unsigned height;
+    unsigned height = 0;
     if ( !heightStr.empty() )
     {
         REQUIRE( heightStr.ToUInt(&height) );
@@ -2599,7 +2643,12 @@ TEST_CASE_METHOD(ImageHandlersInit, "wxImage::Cursor", "[image][cursor]")
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
 
-    wxImage img = wxBitmap((const char*)xbm_horse, 32, 32).ConvertToImage();
+    wxBitmap bmp((const char*)xbm_horse, 32, 32);
+    REQUIRE( bmp.IsOk() );
+    wxCursor cursorFromBmp(bmp, 16, 23);
+    CHECK( cursorFromBmp.IsOk() );
+
+    wxImage img = bmp.ConvertToImage();
     REQUIRE( img.IsOk() );
     img.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_X, 16);
     img.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_Y, 23);

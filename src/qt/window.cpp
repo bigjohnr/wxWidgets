@@ -454,7 +454,7 @@ void wxWindowQt::PostCreation(bool generic)
     // (only for generic controls, to use qt defaults elsewere)
     if (generic)
         QtSetBackgroundStyle();
-    else
+    else if (m_backgroundStyle != wxBG_STYLE_TRANSPARENT)
         SetBackgroundStyle(wxBG_STYLE_SYSTEM);
 
 //    // Use custom Qt window flags (allow to turn on or off
@@ -731,7 +731,13 @@ QWidget *wxWindowQt::QtGetClientWidget() const
 {
     auto frame = wxDynamicCast(this, wxFrame);
     if ( frame )
-        return frame->GetQMainWindow()->centralWidget();
+    {
+        // GetQMainWindow() may return nullptr if frame is wxMDIChildFrame.
+        if ( auto qtMainWindow = frame->GetQMainWindow() )
+        {
+            return qtMainWindow->centralWidget();
+        }
+    }
 
     return wxQtGetDrawingWidget(m_qtContainer, GetHandle());
 }

@@ -306,6 +306,9 @@ public:
     wxDataViewCtrl *GetOwner() const
         { return static_cast<wxDataViewCtrl *>(GetParent()); }
 
+    virtual wxWindow *GetMainWindowOfCompositeControl() override
+        { return GetOwner(); }
+
     // Add/Remove additional column to sorting columns
     void ToggleSortByColumn(int column)
     {
@@ -776,6 +779,9 @@ public:
 
     wxDataViewModel* GetModel() { return GetOwner()->GetModel(); }
     const wxDataViewModel* GetModel() const { return GetOwner()->GetModel(); }
+
+    virtual wxWindow *GetMainWindowOfCompositeControl() override
+        { return GetOwner(); }
 
 #if wxUSE_DRAG_AND_DROP
     wxBitmap CreateItemBitmap( unsigned int row, int &indent );
@@ -4114,6 +4120,12 @@ void wxDataViewMainWindow::Collapse(unsigned int row)
         if ( m_selection.OnItemsDeleted(row + 1, countDeletedRows) )
         {
             SendSelectionChangedEvent(GetItemByRow(row));
+
+            // The event handler for wxEVT_DATAVIEW_SELECTION_CHANGED could
+            // have called Collapse() itself, in which case the node would be
+            // already closed and we shouldn't try to close it again.
+            if ( !node->IsOpen() )
+                return;
         }
 
         node->ToggleOpen(this);
@@ -5877,6 +5889,14 @@ bool wxDataViewCtrl::Enable(bool enable)
 
 bool wxDataViewCtrl::AssociateModel( wxDataViewModel *model )
 {
+    if (wxDataViewModel* const oldModel = GetModel())
+    {
+        // Remove the notifier from the model before calling the base class
+        // version which may (or not) delete the model.
+        oldModel->RemoveNotifier( m_notifier );
+        m_notifier = nullptr;
+    }
+
     if (!wxDataViewCtrlBase::AssociateModel( model ))
         return false;
 
@@ -5884,14 +5904,6 @@ bool wxDataViewCtrl::AssociateModel( wxDataViewModel *model )
     {
         m_notifier = new wxGenericDataViewModelNotifier( m_clientArea );
         model->AddNotifier( m_notifier );
-    }
-    else
-    {
-        // Our previous notifier has either been already deleted when the
-        // previous model was DecRef()'d in the base class AssociateModel() or
-        // is not associated with us any more because if the model is still
-        // alive, it's not used by this control.
-        m_notifier = nullptr;
     }
 
     m_clientArea->DestroyTree();

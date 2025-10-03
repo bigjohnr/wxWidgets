@@ -245,7 +245,7 @@ public:
     }
 
     wxRibbonButtonBarEvent(const wxRibbonButtonBarEvent& e) = default;
-    wxEvent *Clone() const override { return new wxRibbonButtonBarEvent(*this); }
+    wxNODISCARD wxEvent *Clone() const override { return new wxRibbonButtonBarEvent(*this); }
 
     wxRibbonButtonBar* GetBar() {return m_bar;}
     wxRibbonButtonBarButtonBase *GetButton() { return m_button; }

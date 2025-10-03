@@ -84,7 +84,7 @@ private:
         for ( size_t i = 0; i < stops.GetCount(); ++i )
         {
             const wxGraphicsGradientStop stop = stops.Item(i);
-            qstops.append(QGradientStop(stop.GetPosition(),
+            qstops.append(QGradientStop(double(stop.GetPosition()),
                                         stop.GetColour().GetQColor()));
         }
 
@@ -1453,7 +1453,7 @@ wxGraphicsBrush wxQtGraphicsRenderer::CreateBrush(const wxBrush& brush)
 wxGraphicsBrush wxQtGraphicsRenderer::CreateLinearGradientBrush(
     wxDouble x1, wxDouble y1,
     wxDouble x2, wxDouble y2,
-    const wxGraphicsGradientStops& stops, 
+    const wxGraphicsGradientStops& stops,
     const wxGraphicsMatrix& WXUNUSED(matrix))
 {
     wxGraphicsBrush p;
@@ -1466,7 +1466,7 @@ wxGraphicsBrush wxQtGraphicsRenderer::CreateLinearGradientBrush(
 wxGraphicsBrush wxQtGraphicsRenderer::CreateRadialGradientBrush(
     wxDouble startX, wxDouble startY,
     wxDouble endX, wxDouble endY, wxDouble r,
-    const wxGraphicsGradientStops& stops, 
+    const wxGraphicsGradientStops& stops,
     const wxGraphicsMatrix& WXUNUSED(matrix))
 {
     wxGraphicsBrush p;
@@ -1562,12 +1562,14 @@ wxQtGraphicsRenderer::CreateSubBitmap(const wxGraphicsBitmap& bitmap,
     const int srcHeight = sourcePixmap.height();
     const int dstWidth = wxRound(w);
     const int dstHeight = wxRound(h);
+    const int dstX = wxRound(x);
+    const int dstY = wxRound(y);
 
-    wxCHECK_MSG(x >= 0.0 && y >= 0.0 && dstWidth > 0 && dstHeight > 0 &&
-            x + dstWidth <= srcWidth && y + dstHeight <= srcHeight,
+    wxCHECK_MSG(dstX >= 0 && dstY >= 0 && dstWidth > 0 && dstHeight > 0 &&
+            dstX + dstWidth <= srcWidth && dstY + dstHeight <= srcHeight,
             wxNullGraphicsBitmap, wxS("Invalid bitmap region"));
 
-    QPixmap subPixmap = sourcePixmap.copy(x, y, w, h);
+    QPixmap subPixmap = sourcePixmap.copy(dstX, dstY, dstWidth, dstHeight);
 
     wxGraphicsBitmap bmpRes;
     bmpRes.SetRefData(new wxQtBitmapData(this, subPixmap));

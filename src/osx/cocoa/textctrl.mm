@@ -1836,6 +1836,14 @@ wxSize wxNSTextFieldControl::GetBestSize() const
         sz.x = (int)ceil(best.size.width);
         sz.y = (int)ceil(best.size.height);
 
+        // never be smaller than single-line NSMiniControlSize field:
+        sz.y = wxMax(sz.y, 16);
+
+        // !!! Any changes to these adjustments must be mirrored in wxTextCtrl::DoGetSizeFromTextSize() !!!
+
+        sz.x -= 4;
+        sz.y -= 2;
+
         if ( [m_textField isBezeled] || [m_textField isBordered] )
         {
             // since this will be added again in DoGetSizeFromTextSize
@@ -1872,6 +1880,7 @@ wxWidgetImplType* wxWidgetImpl::CreateTextControl( wxTextCtrl* wxpeer,
         c = t;
 
         t->SetStringValue(str);
+        t->ApplyScrollViewBorderType();
     }
     else
     {

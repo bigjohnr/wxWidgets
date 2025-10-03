@@ -194,6 +194,12 @@ public:
         wxString error;
     };
 
+    enum Timeout
+    {
+        Timeout_Default = -1,
+        Timeout_Infinite = 0
+    };
+
     bool IsOk() const { return m_impl.get() != nullptr; }
 
     void SetHeader(const wxString& name, const wxString& value);
@@ -210,6 +216,8 @@ public:
     }
 
     void SetStorage(Storage storage);
+
+    void SetTimeouts(long connectionTimeoutMs, long dataTimeoutMs);
 
     Storage GetStorage() const;
 
@@ -492,7 +500,7 @@ public:
 
     void SetDataBuffer(const wxMemoryBuffer& dataBuf) { m_dataBuf = dataBuf; }
 
-    wxEvent* Clone() const override { return new wxWebRequestEvent(*this); }
+    wxNODISCARD wxEvent* Clone() const override { return new wxWebRequestEvent(*this); }
 
 private:
     wxWebRequest::State m_state;

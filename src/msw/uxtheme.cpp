@@ -32,10 +32,33 @@
 #include "wx/dynlib.h"
 
 #include "wx/msw/uxtheme.h"
+#include "wx/msw/private/darkmode.h"
 
 bool wxUxThemeIsActive()
 {
-    return ::IsAppThemed() && ::IsThemeActive();
+    static int s_isActive = -1;
+    if ( s_isActive == -1 )
+    {
+        s_isActive = ::IsAppThemed() && ::IsThemeActive() ? 1 : 0;
+    }
+
+    return s_isActive != 0;
+}
+
+wxUxThemeHandle::wxUxThemeHandle(const wxWindow* win,
+                                 const wchar_t* classes,
+                                 const wchar_t* classesDark)
+{
+    const bool useDark = classesDark && wxMSWDarkMode::IsActive();
+
+    // When using dark mode and using dark mode-specific classes we have to use
+    // the handle of a control which is *not* in dark mode, and as we don't
+    // have any, just use 0.
+    m_hTheme = DoOpenThemeData(
+        useDark ? 0 : GetHwndOf(win),
+        useDark ? classesDark : classes,
+        win->GetDPI().y
+    );
 }
 
 /* static */

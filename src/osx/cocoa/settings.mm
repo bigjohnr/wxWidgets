@@ -88,7 +88,7 @@ bool wxSystemAppearance::IsDark() const
 wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
 {
     wxOSXEffectiveAppearanceSetter helper;
-    
+
     NSColor* sysColor = nil;
     switch( index )
     {
@@ -112,6 +112,9 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
         break;
     case wxSYS_COLOUR_WINDOW:
         sysColor = [NSColor controlBackgroundColor];
+        break;
+    case wxSYS_COLOUR_GRIDLINES:
+        sysColor = [NSColor gridColor];
         break;
     case wxSYS_COLOUR_BTNFACE:
         if ( WX_IS_MACOS_AVAILABLE(10, 14 ) )

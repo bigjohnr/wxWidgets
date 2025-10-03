@@ -23,7 +23,7 @@
 #endif
 
 #include "wx/uri.h"
-#include "wx/private/socket.h"
+#include "wx/private/sockettype.h"
 #include "wx/evtloop.h"
 
 #ifdef __WINDOWS__
@@ -49,6 +49,9 @@
 #ifndef CURLOPT_ACCEPT_ENCODING
     #define CURLOPT_ACCEPT_ENCODING CURLOPT_ENCODING
 #endif
+
+// Define libcurl timeout constants
+static constexpr int LIBCURL_DEFAULT_CONNECT_TIMEOUT = 300000; // 5m in ms.
 
 //
 // wxWebResponseCURL
@@ -524,6 +527,32 @@ void wxWebRequestCURL::Start()
     StartRequest();
 }
 
+void wxWebRequestCURL::SetTimeouts(long connectionTimeoutMs,
+                                   long dataTimeoutMs)
+{
+    if ( connectionTimeoutMs == wxWebRequest::Timeout_Default )
+        connectionTimeoutMs = LIBCURL_DEFAULT_CONNECT_TIMEOUT;
+
+    if ( connectionTimeoutMs == wxWebRequest::Timeout_Infinite )
+        connectionTimeoutMs = LONG_MAX;
+
+    wxCURLSetOpt(m_handle, CURLOPT_CONNECTTIMEOUT_MS, connectionTimeoutMs);
+
+    // Don't set full request timeout if not specified.
+    if ( dataTimeoutMs == wxWebRequest::Timeout_Infinite ||
+         dataTimeoutMs == wxWebRequest::Timeout_Default )
+    {
+        return;
+    }
+
+    // Check that connectionTimeoutMs + dataTimeoutMs doesn't overflow.
+    const long overflowDiff = LONG_MAX - connectionTimeoutMs;
+    wxCHECK_RET( dataTimeoutMs <= overflowDiff, "Timeout values overflow" );
+
+    const long fullTimeoutMs = connectionTimeoutMs + dataTimeoutMs;
+    wxCURLSetOpt(m_handle, CURLOPT_TIMEOUT_MS, fullTimeoutMs);
+}
+
 bool wxWebRequestCURL::StartRequest()
 {
     m_bytesSent = 0;
@@ -787,7 +816,7 @@ LRESULT CALLBACK WinSock1SocketPoller::MsgProc(WXHWND hwnd, WXUINT uMsg,
 
     if ( uMsg == SOCKET_MESSAGE )
     {
-        // Extract the result any any errors from lParam.
+        // Extract the result and any errors from lParam.
         int winResult = LOWORD(lParam);
         int error = HIWORD(lParam);
 
@@ -846,7 +875,9 @@ using SocketPollerBase = WinSock1SocketPoller;
 
 #else
 
+#if wxUSE_LOG_TRACE
 constexpr const char* TRACE_CURL = "curl";
+#endif
 
 // SocketPollerSourceHandler - a source handler used by the SocketPoller class.
 

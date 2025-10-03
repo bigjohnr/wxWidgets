@@ -397,25 +397,6 @@ bool wxAuiPaneInfo::IsValid() const
 // -- wxAuiManager class implementation --
 
 
-wxBEGIN_EVENT_TABLE(wxAuiManager, wxEvtHandler)
-    EVT_AUI_PANE_BUTTON(wxAuiManager::OnPaneButton)
-    EVT_AUI_RENDER(wxAuiManager::OnRender)
-    EVT_WINDOW_DESTROY(wxAuiManager::OnDestroy)
-    EVT_PAINT(wxAuiManager::OnPaint)
-    EVT_ERASE_BACKGROUND(wxAuiManager::OnEraseBackground)
-    EVT_SIZE(wxAuiManager::OnSize)
-    EVT_SET_CURSOR(wxAuiManager::OnSetCursor)
-    EVT_LEFT_DOWN(wxAuiManager::OnLeftDown)
-    EVT_LEFT_UP(wxAuiManager::OnLeftUp)
-    EVT_MOTION(wxAuiManager::OnMotion)
-    EVT_LEAVE_WINDOW(wxAuiManager::OnLeaveWindow)
-    EVT_MOUSE_CAPTURE_LOST(wxAuiManager::OnCaptureLost)
-    EVT_CHILD_FOCUS(wxAuiManager::OnChildFocus)
-    EVT_AUI_FIND_MANAGER(wxAuiManager::OnFindManager)
-    EVT_SYS_COLOUR_CHANGED(wxAuiManager::OnSysColourChanged)
-wxEND_EVENT_TABLE()
-
-
 wxAuiManager::wxAuiManager(wxWindow* managed_wnd, unsigned int flags)
 {
     m_action = actionNone;
@@ -621,7 +602,21 @@ void wxAuiManager::SetManagedWindow(wxWindow* wnd)
     UnInit();
 
     m_frame = wnd;
-    m_frame->PushEventHandler(this);
+    m_frame->Bind(wxEVT_AUI_PANE_BUTTON, &wxAuiManager::OnPaneButton, this);
+    m_frame->Bind(wxEVT_AUI_RENDER, &wxAuiManager::OnRender, this);
+    m_frame->Bind(wxEVT_DESTROY, &wxAuiManager::OnDestroy, this);
+    m_frame->Bind(wxEVT_PAINT, &wxAuiManager::OnPaint, this);
+    m_frame->Bind(wxEVT_ERASE_BACKGROUND, &wxAuiManager::OnEraseBackground, this);
+    m_frame->Bind(wxEVT_SIZE, &wxAuiManager::OnSize, this);
+    m_frame->Bind(wxEVT_SET_CURSOR, &wxAuiManager::OnSetCursor, this);
+    m_frame->Bind(wxEVT_LEFT_DOWN, &wxAuiManager::OnLeftDown, this);
+    m_frame->Bind(wxEVT_LEFT_UP, &wxAuiManager::OnLeftUp, this);
+    m_frame->Bind(wxEVT_MOTION, &wxAuiManager::OnMotion, this);
+    m_frame->Bind(wxEVT_LEAVE_WINDOW, &wxAuiManager::OnLeaveWindow, this);
+    m_frame->Bind(wxEVT_MOUSE_CAPTURE_LOST, &wxAuiManager::OnCaptureLost, this);
+    m_frame->Bind(wxEVT_CHILD_FOCUS, &wxAuiManager::OnChildFocus, this);
+    m_frame->Bind(wxEVT_AUI_FIND_MANAGER, &wxAuiManager::OnFindManager, this);
+    m_frame->Bind(wxEVT_SYS_COLOUR_CHANGED, &wxAuiManager::OnSysColourChanged, this);
 
 #if wxUSE_MDI
     // if the owner is going to manage an MDI parent frame,
@@ -662,7 +657,21 @@ void wxAuiManager::UnInit()
 {
     if (m_frame)
     {
-        m_frame->RemoveEventHandler(this);
+        m_frame->Unbind(wxEVT_AUI_PANE_BUTTON, &wxAuiManager::OnPaneButton, this);
+        m_frame->Unbind(wxEVT_AUI_RENDER, &wxAuiManager::OnRender, this);
+        m_frame->Unbind(wxEVT_DESTROY, &wxAuiManager::OnDestroy, this);
+        m_frame->Unbind(wxEVT_PAINT, &wxAuiManager::OnPaint, this);
+        m_frame->Unbind(wxEVT_ERASE_BACKGROUND, &wxAuiManager::OnEraseBackground, this);
+        m_frame->Unbind(wxEVT_SIZE, &wxAuiManager::OnSize, this);
+        m_frame->Unbind(wxEVT_SET_CURSOR, &wxAuiManager::OnSetCursor, this);
+        m_frame->Unbind(wxEVT_LEFT_DOWN, &wxAuiManager::OnLeftDown, this);
+        m_frame->Unbind(wxEVT_LEFT_UP, &wxAuiManager::OnLeftUp, this);
+        m_frame->Unbind(wxEVT_MOTION, &wxAuiManager::OnMotion, this);
+        m_frame->Unbind(wxEVT_LEAVE_WINDOW, &wxAuiManager::OnLeaveWindow, this);
+        m_frame->Unbind(wxEVT_MOUSE_CAPTURE_LOST, &wxAuiManager::OnCaptureLost, this);
+        m_frame->Unbind(wxEVT_CHILD_FOCUS, &wxAuiManager::OnChildFocus, this);
+        m_frame->Unbind(wxEVT_AUI_FIND_MANAGER, &wxAuiManager::OnFindManager, this);
+        m_frame->Unbind(wxEVT_SYS_COLOUR_CHANGED, &wxAuiManager::OnSysColourChanged, this);
         m_frame = nullptr;
     }
 }
@@ -895,6 +904,8 @@ bool wxAuiManager::InsertPane(wxWindow* window, const wxAuiPaneInfo& paneInfo,
                 existing_pane.FloatingPosition(paneInfo.floating_pos);
             if (paneInfo.floating_size != wxDefaultSize)
                 existing_pane.FloatingSize(paneInfo.floating_size);
+            if (paneInfo.floating_client_size != wxDefaultSize)
+                existing_pane.FloatingClientSize(paneInfo.floating_client_size);
         }
         else
         {
@@ -1145,7 +1156,9 @@ wxString wxAuiManager::SavePaneInfo(const wxAuiPaneInfo& pane)
     result += wxString::Format(wxT("floatx=%d;"), pane.floating_pos.x);
     result += wxString::Format(wxT("floaty=%d;"), pane.floating_pos.y);
     result += wxString::Format(wxT("floatw=%d;"), pane.floating_size.x);
-    result += wxString::Format(wxT("floath=%d"), pane.floating_size.y);
+    result += wxString::Format(wxT("floath=%d;"), pane.floating_size.y);
+    result += wxString::Format(wxT("floatw_cli=%d;"), pane.floating_client_size.x);
+    result += wxString::Format(wxT("floath_cli=%d"), pane.floating_client_size.y);
 
     return result;
 }
@@ -1153,6 +1166,16 @@ wxString wxAuiManager::SavePaneInfo(const wxAuiPaneInfo& pane)
 // Load a "pane" with the pane information settings in pane_part
 void wxAuiManager::LoadPaneInfo(wxString pane_part, wxAuiPaneInfo &pane)
 {
+    // For backward compatibility, this function needs to handle
+    // both layout2 and layout3.  However, layout3 is a superset
+    // of layout2, so we don't need to actually check both
+    LoadPaneInfoVersioned("layout3", pane_part, pane);
+}
+
+bool wxAuiManager::LoadPaneInfoVersioned(wxString layoutVersion, wxString pane_part, wxAuiPaneInfo& destination)
+{
+    // don't overwrite destination unless pane_part is valid
+    wxAuiPaneInfo pane(destination);
     // replace escaped characters so we can
     // split up the string easily
     pane_part.Replace(wxT("\\|"), wxT("\a"));
@@ -1209,8 +1232,12 @@ void wxAuiManager::LoadPaneInfo(wxString pane_part, wxAuiPaneInfo &pane)
             pane.floating_size.x = wxAtoi(value.c_str());
         else if (val_name == wxT("floath"))
             pane.floating_size.y = wxAtoi(value.c_str());
+        else if (val_name == wxT("floatw_cli") && layoutVersion == "layout3")
+            pane.floating_client_size.x = wxAtoi(value.c_str());
+        else if (val_name == wxT("floath_cli") && layoutVersion == "layout3")
+            pane.floating_client_size.y = wxAtoi(value.c_str());
         else {
-            wxFAIL_MSG(wxT("Bad Perspective String"));
+            return false;
         }
     }
 
@@ -1223,7 +1250,8 @@ void wxAuiManager::LoadPaneInfo(wxString pane_part, wxAuiPaneInfo &pane)
     pane_part.Replace(wxT("\a"), wxT("|"));
     pane_part.Replace(wxT("\b"), wxT(";"));
 
-    return;
+    destination = pane;
+    return true;
 }
 
 
@@ -1236,7 +1264,7 @@ wxString wxAuiManager::SavePerspective()
 {
     wxString result;
     result.Alloc(500);
-    result = wxT("layout2|");
+    result = wxT("layout3|");
 
     for ( const auto& pane : m_panes )
     {
@@ -1259,16 +1287,18 @@ wxString wxAuiManager::SavePerspective()
 bool wxAuiManager::LoadPerspective(const wxString& layout, bool update)
 {
     wxString input = layout;
-    wxString part;
+    wxString layoutVersion;
 
     // check layout string version
     //    'layout1' = wxAUI 0.9.0 - wxAUI 0.9.2
     //    'layout2' = wxAUI 0.9.2 (wxWidgets 2.8)
-    part = input.BeforeFirst(wxT('|'));
+    //    'layout3' = wxWidgets 3.3.1
+    layoutVersion = input.BeforeFirst(wxT('|'));
     input = input.AfterFirst(wxT('|'));
-    part.Trim(true);
-    part.Trim(false);
-    if (part != wxT("layout2"))
+    layoutVersion.Trim(true);
+    layoutVersion.Trim(false);
+    if (layoutVersion != wxT("layout2") &&
+        layoutVersion != wxT("layout3"))
         return false;
 
     // Mark all panes currently managed as hidden. Also, dock all panes that are dockable.
@@ -1328,7 +1358,10 @@ bool wxAuiManager::LoadPerspective(const wxString& layout, bool update)
         pane_part.Replace(wxT("\a"), wxT("|"));
         pane_part.Replace(wxT("\b"), wxT(";"));
 
-        LoadPaneInfo(pane_part, pane);
+        if (!LoadPaneInfoVersioned(layoutVersion, pane_part, pane))
+        {
+            return false;
+        }
 
         if ( pane.IsMaximized() )
             m_hasMaximized = true;
@@ -1436,6 +1469,7 @@ wxAuiManager::CopyLayoutFrom(wxAuiPaneLayoutInfo& layoutInfo,
 
     layoutInfo.floating_pos = pane.floating_pos;
     layoutInfo.floating_size = pane.floating_size;
+    layoutInfo.floating_client_size = pane.floating_client_size;
 
     layoutInfo.is_maximized = pane.HasFlag(wxAuiPaneInfo::optionMaximized);
     layoutInfo.is_hidden = pane.HasFlag(wxAuiPaneInfo::optionHidden);
@@ -1449,6 +1483,7 @@ wxAuiManager::CopyLayoutTo(const wxAuiPaneLayoutInfo& layoutInfo,
 
     pane.floating_pos = layoutInfo.floating_pos;
     pane.floating_size = layoutInfo.floating_size;
+    pane.floating_client_size = layoutInfo.floating_client_size;
 
     pane.SetFlag(wxAuiPaneInfo::optionMaximized, layoutInfo.is_maximized);
     pane.SetFlag(wxAuiPaneInfo::optionHidden, layoutInfo.is_hidden);
@@ -1473,6 +1508,7 @@ void wxAuiManager::SaveLayout(wxAuiSerializer& serializer) const
 
             MakeDIP(m_frame, layoutInfo.floating_pos);
             MakeDIP(m_frame, layoutInfo.floating_size);
+            MakeDIP(m_frame, layoutInfo.floating_client_size);
 
             serializer.SavePane(layoutInfo);
 
@@ -1529,6 +1565,7 @@ void wxAuiManager::LoadLayout(wxAuiDeserializer& deserializer)
     {
         MakeLogical(m_frame, layoutInfo.floating_pos);
         MakeLogical(m_frame, layoutInfo.floating_size);
+        MakeLogical(m_frame, layoutInfo.floating_client_size);
 
         // Find the pane with the same name in the existing layout.
         wxWindow* window = nullptr;
@@ -2523,11 +2560,22 @@ void wxAuiManager::Update()
             {
                 // frame already exists, make sure its position
                 // and size reflect the information in wxAuiPaneInfo
-                if ((p.frame->GetPosition() != p.floating_pos) || (p.frame->GetSize() != p.floating_size))
+                // give floating_client_size precedence over floating_size
+                if ((p.frame->GetPosition() != p.floating_pos) ||
+                    ((p.floating_size != wxDefaultSize) && (p.frame->GetSize() != p.floating_size)) ||
+                    ((p.floating_client_size != wxDefaultSize) && (p.frame->GetClientSize() != p.floating_client_size)))
                 {
-                    p.frame->SetSize(p.floating_pos.x, p.floating_pos.y,
-                                     p.floating_size.x, p.floating_size.y,
-                                     wxSIZE_USE_EXISTING);
+                    if (p.floating_client_size != wxDefaultSize)
+                    {
+                        p.frame->SetPosition(p.floating_pos);
+                        p.frame->SetClientSize(p.floating_client_size);
+                    }
+                    else
+                    {
+                        p.frame->SetSize(p.floating_pos.x, p.floating_pos.y,
+                                         p.floating_size.x, p.floating_size.y,
+                                         wxSIZE_USE_EXISTING);
+                    }
                 /*
                     p.frame->SetSize(p.floating_pos.x, p.floating_pos.y,
                                      wxDefaultCoord, wxDefaultCoord,
@@ -2781,6 +2829,7 @@ bool wxAuiManager::ProcessDockResult(wxAuiPaneInfo& target,
             {
                 target.best_size = hintSize;
                 target.floating_size = wxDefaultSize;
+                target.floating_client_size = wxDefaultSize;
             }
         }
     }
@@ -3675,8 +3724,15 @@ void wxAuiManager::OnFloatingPaneResized(wxWindow* wnd, const wxRect& rect)
     // try to find the pane
     wxAuiPaneInfo& pane = GetPane(wnd);
     wxASSERT_MSG(pane.IsOk(), wxT("Pane window not found"));
+    // if frame isn't fully set up, don't stomp on pos/size info
+    if (!pane.frame)
+    {
+        return;
+    }
 
-    pane.FloatingSize(rect.GetWidth(), rect.GetHeight());
+    // Setting floating client size is enough, there is no need to set floating
+    // size, as it won't be used if the client size is set.
+    pane.FloatingClientSize(pane.frame->WindowToClientSize(rect.GetSize()));
 
     // the top-left position may change as well as the size
     pane.FloatingPosition(rect.x, rect.y);
@@ -3772,7 +3828,7 @@ void wxAuiManager::OnRender(wxAuiManagerEvent& evt)
                 break;
             case wxAuiDockUIPart::typePaneButton:
                 m_art->DrawPaneButton(*dc, m_frame, part.button,
-                        wxAUI_BUTTON_STATE_NORMAL, part.rect, *part.pane);
+                        part.state, part.rect, *part.pane);
                 break;
         }
     }
@@ -3923,6 +3979,9 @@ void wxAuiManager::OnFindManager(wxAuiManagerEvent& evt)
 
 void wxAuiManager::OnSetCursor(wxSetCursorEvent& event)
 {
+    // Don't set any cursor by default.
+    event.Skip();
+
     // determine cursor
     wxAuiDockUIPart* part = HitTest(event.GetX(), event.GetY());
     wxCursor cursor;
@@ -3954,57 +4013,33 @@ void wxAuiManager::OnSetCursor(wxSetCursorEvent& event)
         }
     }
 
-    event.SetCursor(cursor);
+    if ( cursor.IsOk() )
+    {
+        event.SetCursor(cursor);
+
+        // Undo Skip() done above.
+        event.Skip(false);
+    }
 }
 
 
 
-void wxAuiManager::UpdateButtonOnScreen(wxAuiDockUIPart* button_ui_part,
-                                        const wxMouseEvent& event)
+void wxAuiManager::UpdateButtonOnScreen(wxAuiDockUIPart* button_ui_part, int state)
 {
-    wxAuiDockUIPart* hit_test = HitTest(event.GetX(), event.GetY());
-    if (!hit_test || !button_ui_part)
+    wxCHECK_RET( button_ui_part,
+                 "UpdateButtonOnScreen() called with null part" );
+
+    wxASSERT_MSG( button_ui_part->type == wxAuiDockUIPart::typePaneButton,
+                  "UpdateButtonOnScreen() called for non-button part" );
+
+    // Don't bother doing anything if nothing changed.
+    if ( button_ui_part->state == state )
         return;
 
-    int state = wxAUI_BUTTON_STATE_NORMAL;
+    button_ui_part->state = state;
 
-    if (hit_test == button_ui_part)
-    {
-        if (event.LeftDown())
-            state = wxAUI_BUTTON_STATE_PRESSED;
-        else
-            state = wxAUI_BUTTON_STATE_HOVER;
-    }
-    else
-    {
-        if (event.LeftDown())
-            state = wxAUI_BUTTON_STATE_HOVER;
-    }
-
-    // now repaint the button with hover state -- or everything if we can't
-    // repaint just it
-    if ( !wxClientDC::CanBeUsedForDrawing(m_frame) )
-    {
-        m_frame->Refresh();
-        m_frame->Update();
-    }
-
-    wxClientDC cdc(m_frame);
-
-    // if the frame has a toolbar, the client area
-    // origin will not be (0,0).
-    wxPoint pt = m_frame->GetClientAreaOrigin();
-    if (pt.x != 0 || pt.y != 0)
-        cdc.SetDeviceOrigin(pt.x, pt.y);
-
-    if (hit_test->pane)
-    {
-        m_art->DrawPaneButton(cdc, m_frame,
-                  button_ui_part->button,
-                  state,
-                  button_ui_part->rect,
-                  *hit_test->pane);
-    }
+    m_frame->RefreshRect(button_ui_part->rect);
+    m_frame->Update();
 }
 
 void wxAuiManager::OnLeftDown(wxMouseEvent& event)
@@ -4047,7 +4082,7 @@ void wxAuiManager::OnLeftDown(wxMouseEvent& event)
             m_actionStart = wxPoint(event.m_x, event.m_y);
             m_frame->CaptureMouse();
 
-            UpdateButtonOnScreen(part, event);
+            UpdateButtonOnScreen(part, wxAUI_BUTTON_STATE_PRESSED);
         }
         else if (part->type == wxAuiDockUIPart::typeCaption ||
                   part->type == wxAuiDockUIPart::typeGripper)
@@ -4385,8 +4420,6 @@ void wxAuiManager::OnLeftUp(wxMouseEvent& event)
 
         if (m_actionPart)
         {
-            UpdateButtonOnScreen(m_actionPart, event);
-
             // make sure we're still over the item that was originally clicked
             if (m_actionPart == HitTest(event.GetX(), event.GetY()))
             {
@@ -4396,6 +4429,13 @@ void wxAuiManager::OnLeftUp(wxMouseEvent& event)
                 e.SetPane(m_actionPart->pane);
                 e.SetButton(m_actionPart->button);
                 ProcessMgrEvent(e);
+            }
+            else
+            {
+                // normally we should have reset the button state when mouse
+                // moved out of the active part, but do it here just in case we
+                // somehow didn't get it
+                UpdateButtonOnScreen(m_actionPart, wxAUI_BUTTON_STATE_NORMAL);
             }
         }
     }
@@ -4601,13 +4641,12 @@ void wxAuiManager::OnMotion(wxMouseEvent& event)
                 // make the old button normal
                 if (m_hoverButton)
                 {
-                    UpdateButtonOnScreen(m_hoverButton, event);
-                    Repaint();
+                    UpdateButtonOnScreen(m_hoverButton, wxAUI_BUTTON_STATE_NORMAL);
                 }
 
                 // mouse is over a button, so repaint the
                 // button in hover mode
-                UpdateButtonOnScreen(part, event);
+                UpdateButtonOnScreen(part, wxAUI_BUTTON_STATE_HOVER);
                 m_hoverButton = part;
 
             }
@@ -4616,8 +4655,8 @@ void wxAuiManager::OnMotion(wxMouseEvent& event)
         {
             if (m_hoverButton)
             {
+                UpdateButtonOnScreen(m_hoverButton, wxAUI_BUTTON_STATE_NORMAL);
                 m_hoverButton = nullptr;
-                Repaint();
             }
             else
             {
@@ -4631,8 +4670,8 @@ void wxAuiManager::OnLeaveWindow(wxMouseEvent& WXUNUSED(event))
 {
     if (m_hoverButton)
     {
+        UpdateButtonOnScreen(m_hoverButton, wxAUI_BUTTON_STATE_NORMAL);
         m_hoverButton = nullptr;
-        Repaint();
     }
 }
 

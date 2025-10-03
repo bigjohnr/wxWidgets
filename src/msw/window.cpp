@@ -125,10 +125,10 @@
 // global variables
 // ---------------------------------------------------------------------------
 
-#ifndef __WXUNIVERSAL__
+#if wxUSE_PRINTING_ARCHITECTURE && (!defined(__WXUNIVERSAL__) || !wxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW)
 // This variable is defined in src/msw/printdlg.cpp.
 extern bool wxPrinterDialogShown;
-#endif // !__WXUNIVERSAL__
+#endif // wxUSE_PRINTING_ARCHITECTURE
 
 #if wxUSE_MENUS_NATIVE
 extern wxMenu *wxCurrentPopupMenu;
@@ -472,47 +472,6 @@ bool wxWindowMSW::CreateUsingMSWClass(const wxChar* classname,
     msflags &= ~WS_BORDER;
 #endif // wxUniversal
 
-    // Enable double buffering by default for all our own, i.e. not the ones
-    // using native controls, classes.
-    //
-    // The loop here is a bogus one just to create a block that we can break
-    // from, it never executes more than once.
-    while ( !classname )
-    {
-        // WS_EX_COMPOSITED seems to be incompatible with WS_EX_TOPMOST, so
-        // don't use it for:
-
-        // Popup windows that get created with this style themselves: this
-        // seems to work under Windows 10, but doesn't under Windows 7 and
-        // using WS_EX_COMPOSITED for these windows that are temporarily
-        // doesn't seem to be very useful anyhow, so don't bother testing for
-        // the OS version and just always disable it for them.
-        if ( exstyle & WS_EX_TOPMOST )
-            break;
-
-        // Children of such windows as this doesn't work either (see #23078).
-        wxWindow* const tlw = wxGetTopLevelParent(this);
-        if ( tlw && tlw->HasFlag(wxSTAY_ON_TOP) )
-            break;
-
-        // We also allow disabling the use of this style globally by setting
-        // a system option if nothing else (i.e. turning it off for individual
-        // windows) works.
-        if ( wxSystemOptions::GetOptionInt("msw.window.no-composited") )
-            break;
-
-        // Do enable composition for this window.
-
-        exstyle |= WS_EX_COMPOSITED;
-
-        // We have to use the class including CS_[HV]REDRAW bits, as
-        // WS_EX_COMPOSITED doesn't work correctly if the entire window is
-        // not redrawn every time it's drawn.
-        style |= wxFULL_REPAINT_ON_RESIZE;
-
-        break;
-    }
-
     if ( IsShown() )
     {
         msflags |= WS_VISIBLE;
@@ -827,17 +786,14 @@ bool wxWindowMSW::IsTransparentBackgroundSupported(wxString* WXUNUSED(reason)) c
     return true;
 }
 
-bool wxWindowMSW::SetCursor(const wxCursor& cursor)
+void wxWindowMSW::WXUpdateCursor()
 {
-    if ( !wxWindowBase::SetCursor(cursor) )
-    {
-        // no change
-        return false;
-    }
+    // Call the base class version to update m_cursor.
+    wxWindowBase::WXUpdateCursor();
 
     // don't "overwrite" busy cursor
     if ( wxIsBusy() )
-        return true;
+        return;
 
     if ( m_cursor.IsOk() )
     {
@@ -878,8 +834,6 @@ bool wxWindowMSW::SetCursor(const wxCursor& cursor)
                       (WPARAM)GetHwndOf(win),
                       MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
     }
-
-    return true;
 }
 
 void wxWindowMSW::WarpPointer(int x, int y)
@@ -1683,15 +1637,10 @@ void wxWindowMSW::MSWDisableComposited()
 {
     for ( auto win = this; win; win = win->GetParent() )
     {
-        // We never set WS_EX_COMPOSITED on TLWs, and we shouldn't recurse into
-        // different windows, so we can stop here.
+        wxMSWWinExStyleUpdater(GetHwndOf(win)).TurnOff(WS_EX_COMPOSITED);
+
         if ( win->IsTopLevel() )
             break;
-
-        wxMSWWinExStyleUpdater updater(GetHwndOf(win));
-        updater.TurnOff(WS_EX_COMPOSITED);
-        if ( updater.Apply() )
-            win->CallForEachChild([](wxWindow* w) { w->MSWOnDisabledComposited(); });
     }
 }
 
@@ -2480,7 +2429,38 @@ wxWindowMSW::HandleMenuSelect(WXWORD nItem, WXWORD flags, WXHMENU hMenu)
         item = wxID_NONE;
 
     wxMenu* menu = MSWFindMenuFromHMENU(hMenu);
-    wxMenuItem* menuItem = MSWFindMenuItemFromHMENU(hMenu, item);
+
+    // Don't try to look for the menu item if it's not our menu at all, e.g. if
+    // it's the per-window system menu in MDI applications.
+    wxMenuItem* menuItem = nullptr;
+    if ( menu )
+    {
+        int pos = 0;
+        for ( auto& mi : menu->GetMenuItems() )
+        {
+            // If there is a normal menu item with the same ID as the position
+            // of a submenu we give precedence to the normal item, as this
+            // seems more useful because the application is more likely to
+            // handle wxEVT_MENU_HIGHLIGHT for a normal item than for a submenu.
+            if ( mi->GetId() == item )
+            {
+                menuItem = mi;
+                break;
+            }
+
+            // We don't get the ID for submenus, but their position in the
+            // parent window, so this is how we identify them.
+            if ( mi->IsSubMenu() && item == pos )
+            {
+                menuItem = mi;
+
+                // Don't break here, if we find an item with the given ID
+                // later, take it instead of this submenu, as explained above.
+            }
+
+            ++pos;
+        }
+    }
 
     wxMenuEvent event(wxEVT_MENU_HIGHLIGHT, item, menu, menuItem);
     if ( wxMenu::ProcessMenuEvent(menu, event, this) )
@@ -2529,37 +2509,6 @@ wxMenu* wxWindowMSW::MSWFindMenuFromHMENU(WXHMENU hMenu)
         return wxCurrentPopupMenu;
 
     return nullptr;
-}
-
-wxMenuItem* wxWindowMSW::MSWFindMenuItemFromHMENU(WXHMENU hMenu, int item)
-{
-    WinStruct<MENUITEMINFO> mii;
-    mii.fMask = MIIM_ID | MIIM_DATA; // Include MIIM_DATA to access dwItemData
-
-    const int count = ::GetMenuItemCount(hMenu);
-    for ( int i = 0; i < count; i++ )
-    {
-        if ( ::GetMenuItemInfo(hMenu, i, TRUE, &mii) )
-        {
-            wxMenuItem* menuItem = (wxMenuItem*)mii.dwItemData;
-            if ( mii.wID == (unsigned int)item && menuItem )
-            {
-                return menuItem;
-            }
-
-            // Check for submenus
-            if ( mii.hSubMenu )
-            {
-                wxMenuItem* foundInSubmenu = MSWFindMenuItemFromHMENU(mii.hSubMenu, item);
-                if ( foundInSubmenu )
-                {
-                    return foundInSubmenu;
-                }
-            }
-        }
-    }
-
-    return nullptr; // Not found
 }
 
 #endif // wxUSE_MENUS && !defined(__WXUNIVERSAL__)
@@ -4410,14 +4359,14 @@ bool wxWindowMSW::HandleActivate(int state,
         return false;
     }
 
-#ifndef __WXUNIVERSAL__
+#if wxUSE_PRINTING_ARCHITECTURE && (!defined(__WXUNIVERSAL__) || !wxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW)
     if ( wxPrinterDialogShown )
     {
         // Finally, there is a weird case of WM_ACTIVATE synthesized by the
         // native print dialog, see the code in src/msw/printdlg.cpp.
         return false;
     }
-#endif // !__WXUNIVERSAL__
+#endif // wxUSE_PRINTING_ARCHITECTURE
 
     wxActivateEvent event(wxEVT_ACTIVATE,
                           (state == WA_ACTIVE) || (state == WA_CLICKACTIVE),
@@ -5063,6 +5012,9 @@ wxWindowMSW::MSWUpdateOnDPIChange(const wxSize& oldDPI, const wxSize& newDPI)
 
     InvalidateBestSize();
 
+    // update cursor size
+    WXUpdateCursor();
+
     // update font if necessary
     MSWUpdateFontOnDPIChange(newDPI);
 
@@ -5117,6 +5069,10 @@ bool wxWindowMSW::HandleDisplayChange()
 {
     wxDisplayChangedEvent event;
     event.SetEventObject(this);
+
+    // trigger display cache update to ensure the user receives the most
+    // recent display properties on event handling after change.
+    wxDisplay::InvalidateCache();
 
     return HandleWindowEvent(event);
 }
@@ -5206,6 +5162,18 @@ bool wxWindowMSW::HandleSettingChange(WXWPARAM wParam, WXLPARAM lParam)
     {
         // Forward to the existing function generating an event for this.
         HandleSysColorChange();
+    }
+
+    // Another special case: even with this wParam value is sent when the user
+    // changes the mouse pointer size in the Control Panel.
+    if ( wParam == 0x2029 )
+    {
+        WXUpdateCursor();
+
+        wxSysMetricChangedEvent event(wxSysMetric::CursorSize);
+        event.SetEventObject(this);
+
+        (void)HandleWindowEvent(event);
     }
 
     // despite MSDN saying "(This message cannot be sent directly to a window.)"
@@ -6175,9 +6143,7 @@ void wxWindowMSW::GenerateMouseLeave()
 
     // we need to have client coordinates here for symmetry with
     // wxEVT_ENTER_WINDOW
-    RECT rect = wxGetWindowRect(GetHwnd());
-    pt.x -= rect.left;
-    pt.y -= rect.top;
+    wxMapWindowPoints(HWND_DESKTOP, GetHwnd(), &pt);
 
     wxMouseEvent event(wxEVT_LEAVE_WINDOW);
     InitMouseEvent(event, pt.x, pt.y, state);

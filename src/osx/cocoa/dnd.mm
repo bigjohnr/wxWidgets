@@ -188,7 +188,7 @@ void wxOSXPasteboard::DeleteSinkItems()
 void wxOSXPasteboard::Clear()
 {
     [m_pasteboard clearContents];
-    DeleteSinkItems();    
+    DeleteSinkItems();
 }
 
 void wxOSXPasteboard::Flush()
@@ -227,7 +227,7 @@ const wxOSXDataSourceItem* wxOSXPasteboard::GetItem(size_t pos) const
 {
     return new wxOSXPasteboardSourceItem([[m_pasteboard pasteboardItems] objectAtIndex: pos], m_pasteboard);
 }
- 
+
 // data source methods
 
 wxOSXPasteboard* wxOSXPasteboard::GetGeneralClipboard()
@@ -409,9 +409,9 @@ wxDropTarget::wxDropTarget( wxDataObject *data )
 //-------------------------------------------------------------------------
 
 wxDropSource::wxDropSource(wxWindow *win,
-                           const wxCursor &cursorCopy,
-                           const wxCursor &cursorMove,
-                           const wxCursor &cursorStop)
+                           const wxCursorBundle& cursorCopy,
+                           const wxCursorBundle& cursorMove,
+                           const wxCursorBundle& cursorStop)
             : wxDropSourceBase(cursorCopy, cursorMove, cursorStop)
 {
     m_window = win;
@@ -419,13 +419,12 @@ wxDropSource::wxDropSource(wxWindow *win,
 
 wxDropSource::wxDropSource(wxDataObject& data,
                            wxWindow *win,
-                           const wxCursor &cursorCopy,
-                           const wxCursor &cursorMove,
-                           const wxCursor &cursorStop)
-            : wxDropSourceBase(cursorCopy, cursorMove, cursorStop)
+                           const wxCursorBundle& cursorCopy,
+                           const wxCursorBundle& cursorMove,
+                           const wxCursorBundle& cursorStop)
+            : wxDropSource(win, cursorCopy, cursorMove, cursorStop)
 {
     SetData( data );
-    m_window = win;
 }
 
 wxDropSource* wxDropSource::GetCurrentDropSource()

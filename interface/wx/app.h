@@ -9,8 +9,7 @@
 /**
     @class wxAppConsole
 
-    This class is essential for writing console-only or hybrid apps without
-    having to define @c wxUSE_GUI=0.
+    This class us used instead of wxApp for console applications.
 
     It is used to:
     @li set and get application-wide properties (see wxAppConsole::CreateTraits
@@ -30,6 +29,8 @@
     Use wxDECLARE_APP(appClass) in a header file if you want the ::wxGetApp() function
     (which returns a reference to your application object) to be visible to other
     files.
+
+    Note that setting @c wxUSE_GUI=0 makes wxApp identical to this class.
 
     @library{wxbase}
     @category{appmanagement}
@@ -755,8 +756,53 @@ public:
     void SetAppName(const wxString& name);
 
     /**
-        Sets the class name of the application. This may be used in a platform specific
-        manner to refer to the application.
+        Sets the class name of the application.
+
+        The class name is used in a platform specific manner. Currently it is
+        used as "Application User Model ID" under Windows (see [Microsoft
+        documentation][microsoft-docs]), "app ID" when using wxGTK 3.24.22 or
+        later with Wayland (see [Wayland documentation][wayland-docs]) and is
+        unused under the other platforms.
+
+        [microsoft-docs]: https://learn.microsoft.com/en-us/windows/win32/shell/appids
+        [wayland-docs]: https://wayland.app/protocols/xdg-shell#xdg_toplevel:request:set_app_id
+
+        When it is used, the class name purpose is to allow the system to
+        handle all windows with the same ID as belonging to the same
+        application, e.g. to group them together in the taskbar (so the value
+        set here is used by wxTaskBarJumpList constructor). By default the
+        application executable name is used as its ID, so it is not necessary
+        to set the class name, but it may be useful to do it to specify a more
+        unique string (typically by using a reverse domain name notation with
+        the domain unique to the application vendor) or by specifying the same
+        ID in different applications that should be handled as a single one at
+        UI level.
+
+        @note Under Windows setting the application user model ID changes some
+        functionality available by default, notably Shift middle clicking the
+        application icon in the taskbar doesn't open a new instance of the
+        application any more and most recently used files list maintained by
+        the shell doesn't work any longer. Application that need to keep this
+        working need to use `SHGetPropertyStoreForWindow()` and
+        `SHAddToRecentDocs()` functions to provide the necessary support for it.
+
+        Please note that SetClassName() must be called as early as possible and
+        definitely before creating any top-level windows to have an effect.
+        Typically it should be called in the constructor of the class derived
+        from wxApp, e.g.
+
+        @code
+        class MyApp : public wxApp
+        {
+        public:
+            MyApp() {
+                // Constructor shouldn't perform any non-trivial initialization
+                // as the GUI is not available yet, but this function is fine
+                // to call.
+                SetClassName("com.example.myapp");
+            }
+        };
+        @endcode
 
         @see GetClassName()
     */
@@ -1371,7 +1417,11 @@ public:
 
         This function uses @e undocumented, and unsupported by Microsoft,
         functions to enable dark mode support for the desktop applications
-        under Windows 10 20H1 or later (including all Windows 11 versions).
+        under Windows 10 versions later than v1809 (which includes Windows 10
+        LTSC 2019) and all Windows 11 versions. Please note that dark mode
+        testing under versions of Windows earlier than 20H1 (i.e. v2004) has
+        been limited, make sure to test your application especially carefully
+        if you target these versions and want to enable dark mode support.
 
         Note that dark mode can also be enabled by setting the "msw.dark-mode"
         @ref wxSystemOptions "system option" via an environment variable from
@@ -1388,12 +1438,13 @@ public:
         - The following dialogs wrapping common windows dialogs don't support
           dark mode: wxColourDialog, wxFindReplaceDialog, wxFontDialog,
           wxPageSetupDialog, wxPrintDialog.
-        - wxDatePickerCtrl and wxTimePickerCtrl don't support dark mode and
-          use the same (light) background as by default in it.
+        - wxTimePickerCtrl, wxDatePickerCtrl and wxCalendarCtrl don't support dark mode
+          and use the same (light) background as by default in it.
         - Toolbar items for which wxToolBar::SetDropdownMenu() was called
           don't draw the menu drop-down correctly, making it almost
           invisible.
-        - Calling wxMenu::Break() will result in the menu being light.
+        - Calling wxMenu::Break() or wxMenuItem::SetDisabledBitmap() will result
+          in the menu being light.
 
         @param flags Can include @c wxApp::DarkMode_Always to force enabling
             dark mode for the application, even if the system doesn't use the
@@ -1443,6 +1494,24 @@ public:
 #define wxDECLARE_APP( className )
 
 /**
+    This macro and tells wxWidgets which application class should be used.
+
+    Unlike the more usual wxIMPLEMENT_APP() macro, this macro does not define
+    the entry point of the application, i.e. doesn't define @c main() or
+    @c WinMain() function, so you need to implement it separately when using
+    it.
+
+    The @a className passed to this macro must be a name of a default
+    constructible class deriving from wxApp that will be instantiated by
+    wxWidgets during its initialization.
+
+    Note that this macro requires a final semicolon.
+
+    @header{wx/app.h}
+ */
+#define wxIMPLEMENT_APP_NO_MAIN( className )
+
+/**
     This macro defines the application entry point and tells wxWidgets which
     application class should be used.
 
@@ -1451,8 +1520,9 @@ public:
     typical GUI application it's simpler and more convenient to use this macro
     to do both together.
 
-    The @a className passed to this macro must be a name of the class deriving
-    from wxApp.
+    The @a className passed to this macro must be a name of a default
+    constructible class deriving from wxApp that will be instantiated by
+    wxWidgets during its initialization.
 
     Note that this macro requires a final semicolon.
 

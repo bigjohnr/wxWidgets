@@ -97,6 +97,18 @@ public:
     static bool UseDefault();
 
     /**
+        Return true if the locale was set by calling either UseDefault() or
+        UseLocaleName().
+
+        It is typically not necessary to call this function, as GetCurrent()
+        always returns a valid object, but it can be used to check whether an
+        application-set locale or the default one is being used.
+
+        @since 3.3.1
+     */
+    static bool IsSet();
+
+    /**
         Get the object corresponding to the currently used locale.
 
         If UseDefault() had been called, this object corresponds to the default
@@ -339,6 +351,13 @@ public:
         GetSystemLanguage() is used.
     */
     static const wxLanguageInfo* GetLanguageInfo(int lang);
+
+    /**
+        Tries to retrieve a list of the user's (or OS's) preferred UI languages.
+
+        @return An empty list if language-guessing algorithm failed.
+    */
+    static wxVector<wxString> GetPreferredUILanguages();
 
     /**
         Returns English name of the given language or empty string if this

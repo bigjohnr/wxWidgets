@@ -161,7 +161,7 @@ public :
     }
 
     virtual ~wxMenuItemImpl() ;
-    virtual void SetBitmap( const wxBitmap& bitmap ) = 0;
+    virtual void SetBitmap( const wxBitmapBundle& bitmap ) = 0;
     virtual void Enable( bool enable ) = 0;
     virtual void Check( bool check ) = 0;
     virtual void SetLabel( const wxString& text, wxAcceleratorEntry *entry ) = 0;
@@ -282,6 +282,11 @@ public :
     virtual bool        SetBackgroundStyle(wxBackgroundStyle style) = 0;
     virtual void        SetForegroundColour( const wxColour& col ) = 0;
 
+    virtual void        SetDeviceLocalOrigin( wxPoint origin )
+        { m_deviceLocalOrigin = origin; }
+    virtual wxPoint     GetDeviceLocalOrigin() const
+        { return m_deviceLocalOrigin; }
+
     // all coordinates in native parent widget relative coordinates
     virtual void        GetContentArea( int &left , int &top , int &width , int &height ) const = 0;
     virtual void        Move(int x, int y, int width, int height) = 0;
@@ -354,6 +359,11 @@ public :
     virtual int         GetIncrement() const = 0;
     virtual void        PulseGauge() = 0;
     virtual void        SetScrollThumb( wxInt32 value, wxInt32 thumbSize ) = 0;
+    virtual void        SetScrollbar( int WXUNUSED(orient), int WXUNUSED(pos), int WXUNUSED(thumb),
+                                      int WXUNUSED(range), bool WXUNUSED(refresh) ) {}
+    virtual int         GetScrollPos(int WXUNUSED(orient)) const { return 0; }
+    virtual void        SetScrollPos(int WXUNUSED(orient), int WXUNUSED(pos)) {}
+    virtual void 	    ScrollWindow (int WXUNUSED(dx), int WXUNUSED(dy), const wxRect *WXUNUSED(rect) = nullptr) {}
 
     virtual void        SetFont(const wxFont & font) = 0;
 
@@ -367,6 +377,8 @@ public :
 
     virtual bool        EnableTouchEvents(int eventsMask) = 0;
 
+    virtual void        ClipsToBounds(bool clip);
+
     // scrolling views need a clip subview that acts as parent for native children
     // (except for the scollbars) which are children of the view itself
     virtual void        AdjustClippingView(wxScrollBar* horizontal, wxScrollBar* vertical);
@@ -374,6 +386,9 @@ public :
 
     // returns native view which acts as a parent for native children
     virtual WXWidget    GetContainer() const;
+
+    // should be called to enable appropriate borders for native controls with scrollview superviews
+    virtual void        ApplyScrollViewBorderType() { }
 
     // Mechanism used to keep track of whether a change should send an event
     // Do SendEvents(false) when starting actions that would trigger programmatic events
@@ -614,6 +629,7 @@ protected :
     wxWindowMac*        m_wxPeer;
     bool                m_needsFrame;
     bool                m_shouldSendEvents;
+    wxPoint             m_deviceLocalOrigin;
 
     wxDECLARE_ABSTRACT_CLASS(wxWidgetImpl);
 };
@@ -1082,7 +1098,7 @@ public:
         }
         return *this;
     }
-    
+
     wxNSObjRef& operator=( T ptr )
     {
         if (get() != ptr)

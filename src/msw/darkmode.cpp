@@ -107,11 +107,10 @@ DWORD (WINAPI *SetPreferredAppMode)(DWORD) = nullptr;
 
 bool InitDarkMode()
 {
-    // Note: for simplicity, we support dark mode only in Windows 10 v2004
-    // ("20H1", build number 19041) and later, even if, in principle, it could
-    // be supported as far back as v1809 (build 17763) -- but very few people
-    // must still use it by now and so it just doesn't seem to be worth it.
-    if ( !wxCheckOsVersion(10, 0, 19041) )
+    // In theory, dark mode support was added in v1809 (build 17763), so enable
+    // it for all later versions, even though in practice this code has been
+    // mostly tested under v2004 ("20H1", build number 19041) and later ones.
+    if ( !wxCheckOsVersion(10, 0, 17763) )
     {
         wxLogTrace(TRACE_DARKMODE, "Unsupported due to OS version");
         return false;
@@ -331,6 +330,7 @@ wxColour wxDarkModeSettings::GetColour(wxSystemColour index)
         case wxSYS_COLOUR_MENU:
             return wxColour(0x2b2b2b);
 
+        case wxSYS_COLOUR_GRIDLINES:
         case wxSYS_COLOUR_BTNFACE:
             return wxColour(0x333333);
 
@@ -415,6 +415,11 @@ void EnableForTLW(HWND hwnd)
         return;
 
     BOOL useDarkMode = TRUE;
+
+    // DWMWA_USE_IMMERSIVE_DARK_MODE is 19 for v1809, but is 20 for later
+    // versions, so to set title bar black for both v1809 and later versions,
+    // we try to call GetDwmSetWindowAttribute() with the current value first,
+    // but if it fails, we also retry with the old one.
     HRESULT hr = wxDarkModeModule::GetDwmSetWindowAttribute()
                  (
                     hwnd,
@@ -422,6 +427,16 @@ void EnableForTLW(HWND hwnd)
                     &useDarkMode,
                     sizeof(useDarkMode)
                  );
+    if ( FAILED(hr) )
+    {
+        hr = wxDarkModeModule::GetDwmSetWindowAttribute()
+             (
+                hwnd,
+                19,
+                &useDarkMode,
+                sizeof(useDarkMode)
+             );
+    }
     if ( FAILED(hr) )
         wxLogApiError("DwmSetWindowAttribute(USE_IMMERSIVE_DARK_MODE)", hr);
 

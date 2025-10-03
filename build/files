@@ -138,13 +138,12 @@ BASE_COREFOUNDATION_SRC =
     src/osx/core/cfstring.cpp
     src/osx/core/evtloop_cf.cpp
     src/osx/core/secretstore.cpp
+    src/osx/core/stdpaths.mm
     src/osx/core/strconv_cf.cpp
-    src/osx/cocoa/stdpaths.mm
     src/osx/cocoa/utils_base.mm
 
 BASE_COREFOUNDATION_HDR =
     wx/osx/carbon/region.h
-    wx/osx/cocoa/stdpaths.h
     wx/osx/core/cfarray.h
     wx/osx/core/cfdataref.h
     wx/osx/core/cfdictionary.h
@@ -159,6 +158,7 @@ BASE_COREFOUNDATION_HDR =
     wx/osx/core/mimetype.h
     wx/osx/core/objcid.h
     wx/osx/core/private.h
+    wx/osx/core/stdpaths.h
 
 # Base files used by OS X ports (not Carbon)
 BASE_OSX_SHARED_SRC =
@@ -771,6 +771,7 @@ GUI_CMN_SRC =
     src/common/cshelp.cpp
     src/common/ctrlcmn.cpp
     src/common/ctrlsub.cpp
+    src/common/curbndl.cpp
     src/common/datavcmn.cpp
     src/common/dcbase.cpp
     src/common/dcbufcmn.cpp
@@ -820,6 +821,7 @@ GUI_CMN_SRC =
     src/common/imagpnm.cpp
     src/common/imagtga.cpp
     src/common/imagtiff.cpp
+    src/common/imagwebp.cpp
     src/common/imagxpm.cpp
     src/common/layout.cpp
     src/common/lboxcmn.cpp
@@ -873,6 +875,7 @@ GUI_CMN_SRC =
     src/common/validate.cpp
     src/common/valnum.cpp
     src/common/valtext.cpp
+    src/common/webpdecoder.cpp
     src/common/wincmn.cpp
     src/common/windowid.cpp
     src/common/wrapsizer.cpp
@@ -966,6 +969,7 @@ GUI_CMN_HDR =
     wx/bmpcbox.h
     wx/bookctrl.h
     wx/brush.h
+    wx/busycursor.h
     wx/busyinfo.h
     wx/button.h
     wx/calctrl.h
@@ -1115,6 +1119,7 @@ GUI_CMN_HDR =
     wx/imagpnm.h
     wx/imagtga.h
     wx/imagtiff.h
+    wx/imagwebp.h
     wx/imagxpm.h
     wx/infobar.h
     wx/itemattr.h
@@ -1150,8 +1155,10 @@ GUI_CMN_HDR =
     wx/peninfobase.h
     wx/persist.h
     wx/persist/bookctrl.h
+    wx/persist/checkbox.h
     wx/persist/combobox.h
     wx/persist/dataview.h
+    wx/persist/radiobut.h
     wx/persist/splitter.h
     wx/persist/toplevel.h
     wx/persist/treebook.h
@@ -1228,6 +1235,7 @@ GUI_CMN_HDR =
     wx/vlbox.h
     wx/vms_x_fix.h
     wx/vscroll.h
+    wx/webpdecoder.h
     wx/window.h
     wx/windowid.h
     wx/windowptr.h
@@ -1332,6 +1340,7 @@ GTK_LOWLEVEL_SRC =
     src/gtk/tooltip.cpp
     src/gtk/toplevel.cpp
     src/gtk/utilsgtk.cpp
+    src/gtk/wayland.cpp
     src/gtk/win_gtk.cpp
     src/gtk/window.cpp
 GTK2_LOWLEVEL_SRC =
@@ -1723,6 +1732,7 @@ MSW_SRC =
     src/msw/button.cpp
     src/msw/calctrl.cpp
     src/msw/checkbox.cpp
+    src/msw/checklst.cpp
     src/msw/choice.cpp
     src/msw/colordlg.cpp
     src/msw/combo.cpp
@@ -1736,7 +1746,9 @@ MSW_SRC =
     src/msw/dialog.cpp
     src/msw/dirdlg.cpp
     src/msw/dragimag.cpp
+    src/msw/fdrepdlg.cpp
     src/msw/filedlg.cpp
+    src/msw/fontdlg.cpp
     src/msw/frame.cpp
     src/msw/gauge.cpp
     src/msw/headerctrl.cpp
@@ -1788,6 +1800,7 @@ MSW_HDR =
     wx/msw/button.h
     wx/msw/calctrl.h
     wx/msw/checkbox.h
+    wx/msw/checklst.h
     wx/msw/choice.h
     wx/msw/colordlg.h
     wx/msw/combo.h
@@ -1800,7 +1813,9 @@ MSW_HDR =
     wx/msw/dialog.h
     wx/msw/dirdlg.h
     wx/msw/dragimag.h
+    wx/msw/fdrepdlg.h
     wx/msw/filedlg.h
+    wx/msw/fontdlg.h
     wx/msw/frame.h
     wx/msw/gauge.h
     wx/msw/headerctrl.h
@@ -1814,10 +1829,13 @@ MSW_HDR =
     wx/msw/menu.h
     wx/msw/menuitem.h
     wx/msw/metafile.h
+    wx/msw/mfc.h
     wx/msw/missing.h
     wx/msw/msgdlg.h
     wx/msw/msvcrt.h
     wx/msw/notebook.h
+    wx/msw/ole/automtn.h
+    wx/msw/ole/uuid.h
     wx/msw/ownerdrawnbutton.h
     wx/msw/ownerdrw.h
     wx/msw/progdlg.h
@@ -1875,18 +1893,6 @@ MSW_RSC =
     wx/msw/question.ico
     wx/msw/removble.ico
     wx/msw/std.ico
-
-# Files used only by desktop MSW port, but *not* WindowsCE one:
-MSW_DESKTOP_SRC =
-    src/msw/checklst.cpp
-    src/msw/fdrepdlg.cpp
-    src/msw/fontdlg.cpp
-MSW_DESKTOP_HDR =
-    wx/msw/checklst.h
-    wx/msw/fdrepdlg.h
-    wx/msw/fontdlg.h
-    wx/msw/ole/automtn.h
-    wx/msw/ole/uuid.h
 
 # wxDFB
 
@@ -2383,9 +2389,6 @@ MEDIA_MSW_SRC =
     src/msw/mediactrl_wmp10.cpp
     src/msw/mediactrl_qt.cpp
 MEDIA_MSW_HDR =
-# not built on WindowsCE:
-MEDIA_MSW_DESKTOP_SRC =
-MEDIA_MSW_DESKTOP_HDR =
 
 MEDIA_OSX_COCOA_SRC =
     src/osx/cocoa/mediactrl.mm

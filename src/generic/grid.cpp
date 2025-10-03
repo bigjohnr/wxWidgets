@@ -3135,7 +3135,12 @@ wxGrid::SetTable(wxGridTableBase *table,
 
     InvalidateBestSize();
 
-    UpdateCurrentCellOnRedim();
+    // If we already have a valid current cell, ensure that it is in valid
+    // range for the new table with a possibly different number of rows/columns
+    // but don't do anything if the current cell is invalid, setting the table
+    // shouldn't automatically select the cell at (0, 0).
+    if ( m_currentCellCoords != wxGridNoCellCoords )
+        UpdateCurrentCellOnRedim();
 
     return m_created;
 }
@@ -3201,7 +3206,7 @@ void wxGrid::Init()
     m_minAcceptableColWidth  =
     m_minAcceptableRowHeight = 0;
 
-    m_gridLineColour = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
+    m_gridLineColour = wxSystemSettings::GetColour(wxSYS_COLOUR_GRIDLINES);
     m_gridLinesEnabled = true;
     m_gridLinesClipHorz =
     m_gridLinesClipVert = true;
@@ -7700,6 +7705,7 @@ void wxGrid::DrawTextRectangle(wxDC& dc,
             break;
 
         case wxALIGN_CENTRE:
+        case wxALIGN_CENTRE_VERTICAL:
             if ( textOrientation == wxHORIZONTAL )
                 y = rect.y + ((rect.height - textHeight) / 2);
             else
@@ -7741,6 +7747,7 @@ void wxGrid::DrawTextRectangle(wxDC& dc,
                 break;
 
             case wxALIGN_CENTRE:
+            case wxALIGN_CENTRE_HORIZONTAL:
                 if ( textOrientation == wxHORIZONTAL )
                     x = rect.x + ((rect.width - lineWidth) / 2);
                 else

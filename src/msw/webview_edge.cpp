@@ -268,7 +268,11 @@ public:
 
         wxCOMPtr<ICoreWebView2EnvironmentOptions3> options3;
         if (SUCCEEDED(m_webViewEnvironmentOptions->QueryInterface(IID_PPV_ARGS(&options3))))
-            options3->put_IsCustomCrashReportingEnabled(false);
+        {
+            // Contrary to what could be expected, Windows doesn't send crash
+            // report to Microsoft when this setting is set to true, not false!
+            options3->put_IsCustomCrashReportingEnabled(true);
+        }
 #endif
     }
 
@@ -1073,8 +1077,6 @@ bool wxWebViewEdge::Create(wxWindow* parent,
     {
         return false;
     }
-
-    MSWDisableComposited();
 
     if (!m_impl->Create())
         return false;

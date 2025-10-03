@@ -22,7 +22,6 @@
 #ifndef WX_PRECOMP
     #include "wx/msw/wrapcctl.h" // include <commctrl.h> "properly"
     #include "wx/app.h"
-    #include "wx/dcclient.h"
     #include "wx/dcmemory.h"
 #endif
 
@@ -176,7 +175,7 @@ void wxSpinButton::OnPaint(wxPaintEvent& event)
         const RECT rc = wxGetClientRect(GetHwnd());
         const wxSize size{rc.right - rc.left, rc.bottom - rc.top};
 
-        if ( size == wxSize() )
+        if ( size.IsEmpty() )
             return;
 
         wxBitmap bmp(size);
@@ -253,13 +252,7 @@ void wxSpinButton::OnPaint(wxPaintEvent& event)
     }
     else
     {
-        // We need to always paint this control explicitly instead of letting
-        // DefWndProc() do it, as this avoids whichever optimization the latter
-        // function does when WS_EX_COMPOSITED is on that result in not drawing
-        // parts of the control at all (see #23656).
-        wxPaintDC dc(this);
-
-        wxSpinButtonBase::OnPaint(event);
+        event.Skip();
     }
 }
 
@@ -358,7 +351,7 @@ bool wxSpinButton::MSWOnNotify(int WXUNUSED(idCtrl), WXLPARAM lParam, WXLPARAM *
     NM_UPDOWN *lpnmud = (NM_UPDOWN *)lParam;
 
     if ( lpnmud->hdr.hwndFrom != GetHwnd() || // make sure it is the right control
-         lpnmud->hdr.code != UDN_DELTAPOS )   // and the right notification 
+         lpnmud->hdr.code != UDN_DELTAPOS )   // and the right notification
         return false;
 
     int newVal = lpnmud->iPos + lpnmud->iDelta;

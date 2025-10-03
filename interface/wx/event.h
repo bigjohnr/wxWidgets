@@ -1909,6 +1909,22 @@ public:
     */
     int GetPosition() const;
 
+    /**
+        Offset of the scroll position from the nearest position expressed in
+        scroll units.
+
+        In cases where scrolling is possible with single pixel precision,
+        such as when panning on a touch screen with fingers, this returns
+        the offset in pixels of the real position compared to the position
+        obtained by multiplying the current scroll position in scroll units by
+        the size of scroll unit in pixels. For example, if the scroll unit size
+        (pixels per line) is 20px, this function returns a value which can be
+        between 0 and 19.
+
+        @since 3.2.2
+    */
+    int GetPixelOffset() const;
+
     void SetOrientation(int orient);
     void SetPosition(int pos);
 };
@@ -1951,6 +1967,65 @@ public:
     wxSysColourChangedEvent();
 };
 
+
+/**
+    Possible values for wxSysMetricChangedEvent::GetMetric().
+
+    @since 3.3.0
+ */
+enum class wxSysMetric
+{
+    /**
+        Undetermined or unknown system metric has changed.
+     */
+    Other,
+
+    /**
+        The default system cursor size has changed.
+
+        The new value can be obtained by calling wxSystemSettings::GetMetric()
+        with ::wxSYS_CURSOR_SIZE parameter.
+     */
+    CursorSize
+};
+
+/**
+    @class wxSysMetricChangedEvent
+
+    Notification about a change in one of the global system metrics.
+
+    Currently this event is only sent by wxMSW.
+
+    Event handlers for this event can access the new system metric values through
+    wxSystemSettings::GetMetric().
+
+    @remarks
+        The default event handler for this event propagates the event to child windows,
+        since the system events are only sent to top-level windows.
+        If intercepting this event for a top-level window, remember to either call
+        wxEvent::Skip() on the event, call the base class handler, or pass the event
+        on to the window's children explicitly.
+
+    @beginEventTable{wxSysMetricChangedEvent}
+    @event{EVT_SYS_METRIC_CHANGED(func)}
+        Process a @c wxEVT_SYS_METRIC_CHANGED event.
+    @endEventTable
+
+    @library{wxcore}
+    @category{events}
+
+    @see @ref overview_events
+
+    @since 3.3.0
+*/
+class wxSysMetricChangedEvent : public wxEvent
+{
+public:
+    /**
+        Return the metric which has changed.
+     */
+    wxSysMetric GetMetric() const;
+};
 
 
 /**
@@ -3772,6 +3847,11 @@ public:
     clicked-on window, and then either show some suitable help or call wxEvent::Skip()
     if the identifier is unrecognised.
 
+    Note that for some windows, such as wxToolBar, the event uses the ID of the
+    tool that was under the mouse, if any, and not the ID of the window itself.
+    If necessary, wxEvent::GetEventObject() may be used to get the pointer to
+    the toolbar itself.
+
     Calling Skip is important because it allows wxWidgets to generate further
     events for ancestors of the clicked-on window. Otherwise it would be impossible to
     show help for container windows, since processing would stop after the first window
@@ -4026,7 +4106,7 @@ public:
     bool IsPrimary() const;
 
     /**
-        Returns the ID of the touch. This allows to track the move of an specific touch point.
+        Returns the ID of the touch. This allows to track the move of a specific touch point.
     */
     const wxTouchSequenceId& GetSequenceId() const;
 };
@@ -5042,12 +5122,27 @@ public:
     const wxCursor& GetCursor() const;
 
     /**
+        Returns the mouse position for which the cursor is requested.
+
+        This position is expressed in the client coordinates of the window.
+
+        @see GetX(), GetY()
+
+        @since 3.3.0
+    */
+    wxPoint GetPosition() const;
+
+    /**
         Returns the X coordinate of the mouse in client coordinates.
+
+        @see GetPosition()
     */
     wxCoord GetX() const;
 
     /**
         Returns the Y coordinate of the mouse in client coordinates.
+
+        @see GetPosition()
     */
     wxCoord GetY() const;
 
@@ -5385,6 +5480,7 @@ wxEventType wxEVT_MENU_CLOSE;
 wxEventType wxEVT_MENU_HIGHLIGHT;
 wxEventType wxEVT_CONTEXT_MENU;
 wxEventType wxEVT_SYS_COLOUR_CHANGED;
+wxEventType wxEVT_SYS_METRIC_CHANGED;
 wxEventType wxEVT_DISPLAY_CHANGED;
 wxEventType wxEVT_DPI_CHANGED;
 wxEventType wxEVT_QUERY_NEW_PALETTE;

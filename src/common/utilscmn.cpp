@@ -1069,15 +1069,13 @@ wxVersionInfo wxGetLibraryVersionInfo()
 
     msg += wxPlatformInfo::Get().GetPlatformDescription();
 
-    const wxString copyrightSign = wxString::FromUTF8("\xc2\xa9");
-
     return wxVersionInfo(wxS("wxWidgets"),
                          wxMAJOR_VERSION,
                          wxMINOR_VERSION,
                          wxRELEASE_NUMBER,
                          msg,
-                         wxString::Format(wxS("Copyright %s 1992-2025 wxWidgets team"),
-                                          copyrightSign));
+                         wxString::FromUTF8("Copyright © 1992-2025 wxWidgets team")
+                         );
 }
 
 
@@ -1322,7 +1320,7 @@ wxFindMenuItemId(wxFrame *frame,
 }
 
 // Try to find the deepest child that contains 'pt'.
-// We go backwards, to try to allow for controls that are spacially
+// We go backwards, to try to allow for controls that are spatially
 // within other controls, but are still siblings (e.g. buttons within
 // static boxes). Static boxes are likely to be created _before_ controls
 // that sit inside them.

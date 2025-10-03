@@ -228,6 +228,17 @@ public:
     const wxIconBundle& GetIcons() const;
 
     /**
+        Get the window title.
+
+        This base class function is overridden in this class to behave as
+        GetTitle() and is useful when having only a `wxWindow*` pointer.
+
+        Please call GetTitle() directly instead of this function for clarity if
+        possible.
+     */
+    virtual wxString GetLabel() const;
+
+    /**
         Gets a string containing the window title.
 
         @see SetTitle()
@@ -492,6 +503,11 @@ public:
 
         @note In wxMSW, @a icon must be either 16x16 or 32x32 icon.
 
+        @note In wxGTK this function currently doesn't do anything when using
+            Wayland, which doesn't allow setting the icon for a window. Please
+            create a `.desktop` file for your application to set the icon for
+            its windows.
+
         @see wxIcon, SetIcons()
     */
     void SetIcon(const wxIcon& icon);
@@ -507,6 +523,11 @@ public:
 
         @note In wxMSW, @a icons must contain a 16x16 or 32x32 icon,
               preferably both.
+
+        @note In wxGTK this function currently doesn't do anything when using
+            Wayland, which doesn't allow setting the icon for a window. Please
+            create a `.desktop` file for your application to set the icon for
+            its windows.
 
         @see wxIconBundle
     */
@@ -571,6 +592,20 @@ public:
     void SetSizeHints(const wxSize& minSize,
                       const wxSize& maxSize = wxDefaultSize,
                       const wxSize& incSize = wxDefaultSize);
+
+    /**
+        Sets the window title.
+
+        This base class function is overridden in this class to behave as
+        SetTitle() and is useful when having only a `wxWindow*` pointer.
+
+        Please call SetTitle() directly instead of this function for clarity if
+        possible.
+
+        @param title
+            The window title.
+     */
+    virtual void SetLabel(const wxString& title);
 
     /**
         Sets the window title.

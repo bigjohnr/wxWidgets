@@ -55,6 +55,7 @@
 #include <wx/bookctrl.h>
 #include <wx/brush.h>
 #include <wx/buffer.h>
+#include <wx/busycursor.h>
 #include <wx/busyinfo.h>
 #include <wx/button.h>
 #include <wx/calctrl.h>
@@ -202,6 +203,7 @@
 #include <wx/imagpnm.h>
 #include <wx/imagtga.h>
 #include <wx/imagtiff.h>
+#include <wx/imagwebp.h>
 #include <wx/imagxpm.h>
 #include <wx/infobar.h>
 #include <wx/init.h>
@@ -263,8 +265,10 @@
 #include <wx/peninfobase.h>
 #include <wx/persist.h>
 #include <wx/persist/bookctrl.h>
+#include <wx/persist/checkbox.h>
 #include <wx/persist/combobox.h>
 #include <wx/persist/dataview.h>
+#include <wx/persist/radiobut.h>
 #include <wx/persist/splitter.h>
 #include <wx/persist/toplevel.h>
 #include <wx/persist/treebook.h>
@@ -395,6 +399,7 @@
 #include <wx/volume.h>
 #include <wx/vscroll.h>
 #include <wx/weakref.h>
+#include <wx/webpdecoder.h>
 #include <wx/webrequest.h>
 #include <wx/webview_chromium.h>
 #include <wx/webviewarchivehandler.h>

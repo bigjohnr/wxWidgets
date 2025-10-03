@@ -298,6 +298,7 @@ corresponding library. The following symbols are honoured:
     - wxNO_JPEG_LIB
     - wxNO_PNG_LIB
     - wxNO_TIFF_LIB
+    - wxNO_WEBP_LIB
     - wxNO_ZLIB_LIB
 
 Notice that the base library is always included and the core is always included
@@ -429,6 +430,12 @@ more details.
 @itemdef{wxICON_IS_BITMAP,
          defined in the ports where wxIcon inherits from wxBitmap (all but
          wxMSW currently)}
+@itemdef{wxENABLE_EXTRA_WARNINGS,
+         this symbol can be predefined before including wxWidgets headers to
+         enable extra compilers warnings. This is mostly useful for wxWidgets
+         developers, but can also be used by the applications if they want to
+         opt in into getting more help from compiler. Support for this symbol
+         appeared in wxWidgets 3.3.0.}
 @endDefList
 
 */
