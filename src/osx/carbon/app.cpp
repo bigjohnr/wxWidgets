@@ -44,6 +44,7 @@
 // mac
 #include "wx/osx/private.h"
 #include "wx/display.h"
+#include "wx/osx/private/available.h"
 
 #if defined(WXMAKINGDLL_CORE)
 #   include <mach-o/dyld.h>
@@ -191,6 +192,22 @@ void wxApp::MacReopenApp()
     MacNewFile();
 }
 
+bool wxApp::OSXIsFullScreenApp()
+{
+#if wxOSX_USE_IPHONE
+
+    if ( WX_IS_IOS_AVAILABLE(26, 0) )
+    {
+        // TODO determine whether we are running as windowed app
+    }
+
+    return true;
+
+#else
+    return false;
+#endif
+}
+
 #if wxOSX_USE_COCOA_OR_IPHONE
 void wxApp::OSXOnWillFinishLaunching()
 {
@@ -220,6 +237,16 @@ bool wxApp::OSXOnShouldTerminate()
     ProcessEvent(event);
     return !event.GetVeto();
 }
+
+#endif
+
+#if wxOSX_USE_IPHONE && wxUSE_MENUBAR
+
+void wxApp::OSXOnBuildMenu(WX_NSObject builder)
+{
+    wxMenuBar::MacGetInstalledMenuBar()->OSXOnBuildMenu(builder);
+}
+
 #endif
 
 #if wxDEBUG_LEVEL && wxOSX_USE_COCOA_OR_CARBON

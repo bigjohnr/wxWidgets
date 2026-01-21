@@ -18,6 +18,14 @@
 #include "wx/palette.h"
 #include "wx/window.h"
 
+// Most ports have a single implementation of wxGLCanvas, but wxGTK has two:
+// legacy GLX-based one (also used by wxX11) and EGL-based one which is used
+// if support for EGL is available. wxHAS_EGL is defined by the build system
+// but define wxHAS_GLX too for consistency, even if it's always available.
+#if defined(__WXX11__) || defined(__WXGTK__)
+    #define wxHAS_GLX 1
+#endif
+
 class WXDLLIMPEXP_FWD_GL wxGLCanvas;
 class WXDLLIMPEXP_FWD_GL wxGLContext;
 
@@ -134,9 +142,16 @@ public:
     wxGLContextAttrs& PlatformDefaults();
     void EndList(); // No more values can be chained
 
+#ifdef wxHAS_GLX
     // Currently only used for X11 context creation
-    bool x11Direct; // X11 direct render
-    bool renderTypeRGBA;
+    bool x11Direct = false; // X11 direct render
+    bool renderTypeRGBA = false;
+#endif // wxHAS_GLX
+
+#ifdef wxHAS_EGL
+    // Used to select the kind of API used with EGL (OpenGL or OpenGL ES).
+    bool useES = false;
+#endif // wxHAS_EGL
 };
 
 // ----------------------------------------------------------------------------
@@ -187,6 +202,9 @@ public:
 
     // set this context as the current one
     virtual bool SetCurrent(const wxGLCanvas& win) const = 0;
+
+    // unset any currently set context
+    static void ClearCurrent();
 
     bool IsOK() const { return m_isOk; }
 
@@ -261,24 +279,26 @@ public:
     // as a parameter
     wxGLContextAttrs& GetGLCTXAttrs() { return m_GLCTXAttrs; }
 
-protected:
-    // override this to implement SetColour() in GL_INDEX_MODE
-    // (currently only implemented in wxX11)
-    virtual int GetColourIndex(const wxColour& WXUNUSED(col)) { return -1; }
+    // Implementation only from now on.
 
     // check if the given extension name is present in the space-separated list
     // of extensions supported by the current implementation such as returned
     // by glXQueryExtensionsString() or glGetString(GL_EXTENSIONS)
     static bool IsExtensionInList(const char *list, const char *extension);
 
-    // For the case of "int* attribList" at ctor is != 0
-    wxGLContextAttrs m_GLCTXAttrs;
-
     // Extract pixel format and context attributes.
     // Return false if an unknown attribute is found.
     static bool ParseAttribList(const int* attribList,
                                 wxGLAttributes& dispAttrs,
                                 wxGLContextAttrs* ctxAttrs = nullptr);
+
+protected:
+    // override this to implement SetColour() in GL_INDEX_MODE
+    // (currently only implemented in wxX11)
+    virtual int GetColourIndex(const wxColour& WXUNUSED(col)) { return -1; }
+
+    // For the case of "int* attribList" at ctor is != 0
+    wxGLContextAttrs m_GLCTXAttrs;
 
 #if wxUSE_PALETTE
     // create default palette if we're not using RGBA mode
@@ -290,8 +310,9 @@ protected:
 };
 
 // ----------------------------------------------------------------------------
-// wxGLApp: a special wxApp subclass for OpenGL applications which must be used
-//          to select a visual compatible with the given attributes
+// wxGLApp: Deprecated wxApp subclass for OpenGL applications, don't bother
+//          using it any longer, just use wxGLCanvas::IsDisplaySupported() from
+//          a normal wxApp-derived application class if necessary.
 // ----------------------------------------------------------------------------
 
 class WXDLLIMPEXP_GL wxGLAppBase : public wxApp

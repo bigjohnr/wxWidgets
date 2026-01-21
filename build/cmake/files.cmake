@@ -31,28 +31,20 @@ set(BASE_UNIX_AND_DARWIN_HDR
     wx/unix/fswatcher_kqueue.h
 )
 
-set(BASE_UNIX_AND_DARWIN_NOTWXMAC_SRC
+set(BASE_UNIX_SRC
+    src/unix/fswatcher_inotify.cpp
+    src/unix/secretstore.cpp
+    src/unix/stdpaths.cpp
     ${BASE_UNIX_AND_DARWIN_SRC}
     src/unix/mimetype.cpp
     src/unix/uilocale.cpp
 )
 
-set(BASE_UNIX_AND_DARWIN_NOTWXMAC_HDR
-    ${BASE_UNIX_AND_DARWIN_HDR}
-    wx/unix/mimetype.h
-)
-
-set(BASE_UNIX_SRC
-    ${BASE_UNIX_AND_DARWIN_NOTWXMAC_SRC}
-    src/unix/fswatcher_inotify.cpp
-    src/unix/secretstore.cpp
-    src/unix/stdpaths.cpp
-)
-
 set(BASE_UNIX_HDR
-    ${BASE_UNIX_AND_DARWIN_NOTWXMAC_HDR}
     wx/unix/fswatcher_inotify.h
     wx/unix/stdpaths.h
+    ${BASE_UNIX_AND_DARWIN_HDR}
+    wx/unix/mimetype.h
 )
 
 set(BASE_WIN32_SRC
@@ -115,6 +107,7 @@ set(BASE_COREFOUNDATION_SRC
     src/osx/core/strconv_cf.cpp
     src/osx/cocoa/utils_base.mm
     src/osx/core/stdpaths.mm
+    src/osx/volume.mm
 )
 
 set(BASE_COREFOUNDATION_HDR
@@ -136,33 +129,26 @@ set(BASE_COREFOUNDATION_HDR
     wx/osx/core/stdpaths.h
 )
 
-set(BASE_OSX_SHARED_SRC
-    src/osx/core/mimetype.cpp
+set(BASE_OSX_SRC
     src/osx/fswatcher_fsevents.cpp
     ${BASE_COREFOUNDATION_SRC}
     ${BASE_UNIX_AND_DARWIN_SRC}
     src/osx/core/uilocale.mm
+    src/osx/core/mimetype.cpp
 )
 
-set(BASE_OSX_SHARED_HDR
-    wx/osx/fswatcher_fsevents.h
+set(BASE_OSX_HDR
+    wx/osx/chkconf.h
+    wx/osx/cocoa/chkconf.h
+    wx/osx/iphone/chkconf.h
     ${BASE_COREFOUNDATION_HDR}
     ${BASE_UNIX_AND_DARWIN_HDR}
+    wx/osx/fswatcher_fsevents.h
+    wx/osx/evtloopsrc.h
 )
 
 set(BASE_AND_GUI_OSX_COCOA_SRC
     src/osx/cocoa/utils.mm
-    src/osx/volume.mm
-)
-
-set(BASE_OSX_NOTWXMAC_SRC
-    ${BASE_UNIX_AND_DARWIN_NOTWXMAC_SRC}
-    ${BASE_COREFOUNDATION_SRC}
-)
-
-set(BASE_OSX_NOTWXMAC_HDR
-    ${BASE_UNIX_AND_DARWIN_NOTWXMAC_HDR}
-    ${BASE_COREFOUNDATION_HDR}
 )
 
 set(QT_UNIX_SRC
@@ -1144,7 +1130,6 @@ set(GUI_CMN_HDR
     wx/quantize.h
     wx/rawbmp.h
     wx/region.h
-    wx/scopeguard.h
     wx/simplebook.h
     wx/spinbutt.h
     wx/spinctrl.h
@@ -1806,7 +1791,6 @@ set(MSW_HDR
     wx/msw/headerctrl.h
     wx/msw/imaglist.h
     wx/msw/iniconf.h
-    wx/msw/init.h
     wx/msw/listbox.h
     wx/msw/listctrl.h
     wx/msw/mdi.h
@@ -2064,7 +2048,6 @@ set(OSX_SHARED_HDR
     wx/osx/button.h
     wx/osx/checkbox.h
     wx/osx/checklst.h
-    wx/osx/chkconf.h
     wx/osx/choice.h
     wx/osx/clipbrd.h
     wx/osx/colordlg.h
@@ -2084,7 +2067,6 @@ set(OSX_SHARED_HDR
     wx/osx/dirdlg.h
     wx/osx/dnd.h
     wx/osx/evtloop.h
-    wx/osx/evtloopsrc.h
     wx/osx/filedlg.h
     wx/osx/font.h
     wx/osx/fontdlg.h
@@ -2207,7 +2189,6 @@ set(OSX_COCOA_SRC
 )
 
 set(OSX_COCOA_HDR
-    wx/osx/cocoa/chkconf.h
     wx/osx/cocoa/evtloop.h
     wx/osx/cocoa/private.h
     wx/generic/region.h
@@ -2231,11 +2212,15 @@ set(OSX_IPHONE_SRC
     src/osx/iphone/anybutton.mm
     src/osx/iphone/button.mm
     src/osx/iphone/checkbox.mm
+    src/osx/iphone/choice.mm
+    src/osx/iphone/colour.mm
     src/osx/iphone/dialog.mm
     src/osx/iphone/evtloop.mm
     src/osx/iphone/gauge.mm
+    src/osx/iphone/listbox.mm
     src/osx/iphone/msgdlg.mm
     src/osx/iphone/nonownedwnd.mm
+    src/osx/iphone/notebook.mm
     src/osx/iphone/scrolbar.mm
     src/osx/iphone/settings.mm
     src/osx/iphone/slider.mm
@@ -2252,7 +2237,6 @@ set(OSX_IPHONE_SRC
 )
 
 set(OSX_IPHONE_HDR
-    wx/osx/iphone/chkconf.h
     wx/osx/iphone/private.h
     wx/generic/region.h
     wx/osx/sound.h
@@ -2716,12 +2700,12 @@ set(OPENGL_GTK_SRC
     src/gtk/glcanvas.cpp
     src/unix/glx11.cpp
     src/unix/glegl.cpp
+    src/unix/glcanvas.cpp
 )
 
 set(OPENGL_GTK_HDR
     wx/gtk/glcanvas.h
-    wx/unix/glx11.h
-    wx/unix/glegl.h
+    wx/unix/glcanvas.h
 )
 
 set(OPENGL_OSX_COCOA_SRC
@@ -2745,11 +2729,12 @@ set(OPENGL_OSX_IPHONE_HDR
 set(OPENGL_X11_SRC
     src/x11/glcanvas.cpp
     src/unix/glx11.cpp
+    src/unix/glcanvas.cpp
 )
 
 set(OPENGL_X11_HDR
     wx/x11/glcanvas.h
-    wx/unix/glx11.h
+    wx/unix/glcanvas.h
 )
 
 set(OPENGL_QT_SRC
@@ -2906,11 +2891,13 @@ set(STC_CMN_SRC
     src/stc/PlatWX.cpp
     src/stc/ScintillaWX.cpp
     src/xrc/xh_styledtextctrl.cpp
+    src/stc/minimap.cpp
 )
 
 set(STC_CMN_HDR
     wx/stc/stc.h
     wx/xrc/xh_styledtextctrl.h
+    wx/stc/minimap.h
 )
 
 set(STC_OSX_COCOA_SRC

@@ -693,6 +693,7 @@ COND_USE_RTTI_0
 COND_USE_PLUGINS_0
 COND_USE_PCH_1
 COND_USE_OPENGL_1
+COND_USE_LUNASVG_1
 COND_USE_GUI_1_wxUSE_LIBWEBP_builtin
 COND_USE_GUI_1_wxUSE_LIBTIFF_builtin
 COND_USE_GUI_1_wxUSE_LIBPNG_builtin
@@ -700,6 +701,7 @@ COND_USE_GUI_1_wxUSE_LIBJPEG_builtin
 COND_USE_GUI_1_WXUNIV_1
 COND_USE_GUI_1_WXUNIV_0
 COND_USE_GUI_1_USE_OPENGL_1
+COND_USE_GUI_1_USE_LUNASVG_1
 COND_USE_GUI_1
 COND_USE_GUI_0
 COND_USE_EXCEPTIONS_1
@@ -735,7 +737,6 @@ COND_TOOLKIT_GTK
 COND_TOOLKIT_DFB_USE_GUI_1
 COND_TOOLKIT_DFB
 COND_TOOLKIT_COCOA
-COND_TOOLKIT_
 COND_SHARED_1_USE_GUI_1_USE_OPENGL_1
 COND_SHARED_1_USE_GUI_1
 COND_SHARED_1
@@ -748,6 +749,7 @@ COND_SHARED_0_USE_GUI_1_wxUSE_LIBTIFF_builtin
 COND_SHARED_0_USE_GUI_1_wxUSE_LIBPNG_builtin
 COND_SHARED_0_USE_GUI_1_wxUSE_LIBJPEG_builtin
 COND_SHARED_0_USE_GUI_1_USE_OPENGL_1
+COND_SHARED_0_USE_GUI_1_USE_LUNASVG_1
 COND_SHARED_0_TOOLKIT_MSW_WXUNIV_0
 COND_SHARED_0_TOOLKIT_MAC_WXUNIV_0
 COND_SHARED_0
@@ -1051,7 +1053,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -1117,6 +1118,7 @@ with_libnotify
 with_opengl
 with_xtest
 with_nanosvg
+with_lunasvg
 with_cairo
 with_dmalloc
 with_sdl
@@ -1507,7 +1509,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1760,15 +1761,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1906,7 +1898,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -2059,7 +2051,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -2403,6 +2394,7 @@ Optional Packages:
   --with-opengl           use OpenGL (or Mesa)
   --with-xtest            use XTest extension
   --with-nanosvg          use NanoSVG for rasterizing SVG
+  --with-lunasvg          use LunaSVG for rasterizing SVG
   --with-cairo            use Cairo-based wxGraphicsContext implementation
   --with-dmalloc          use dmalloc library (http://dmalloc.com/)
   --with-sdl              use SDL for audio on Unix
@@ -4081,6 +4073,7 @@ DEFAULT_wxUSE_LIBMSPACK=no
 DEFAULT_wxUSE_LIBSDL=no
 DEFAULT_wxUSE_LIBLZMA=no
 DEFAULT_wxUSE_CAIRO=no
+DEFAULT_wxUSE_LUNASVG=no
 
 DEFAULT_wxUSE_ACCESSIBILITY=no
 DEFAULT_wxUSE_UNICODE_UTF8=no
@@ -5195,6 +5188,35 @@ fi
 
 
           eval "$wx_cv_use_nanosvg"
+
+
+          withstring=
+          defaultval=$wxUSE_ALL_FEATURES
+          if test -z "$defaultval"; then
+              if test x"$withstring" = xwithout; then
+                  defaultval=yes
+              else
+                  defaultval=no
+              fi
+          fi
+
+# Check whether --with-lunasvg was given.
+if test "${with_lunasvg+set}" = set; then :
+  withval=$with_lunasvg;
+                        if test "$withval" = yes; then
+                          wx_cv_use_lunasvg='wxUSE_LUNASVG=yes'
+                        else
+                          wx_cv_use_lunasvg='wxUSE_LUNASVG=no'
+                        fi
+
+else
+
+                        wx_cv_use_lunasvg='wxUSE_LUNASVG=${'DEFAULT_wxUSE_LUNASVG":-$defaultval}"
+
+fi
+
+
+          eval "$wx_cv_use_lunasvg"
 
 
 if test "$wxUSE_GTK" = 1 -o "$wxUSE_X11" = 1; then
@@ -15540,6 +15562,10 @@ case "${wxWITH_CXX-$wxDEFAULT_CXXSTD}" in
             as_fn_error $? "Using wxWebView Chromium backend requires C++14 or later." "$LINENO" 5
         fi
 
+        if test "$wxUSE_LUNASVG" = "yes"; then
+            as_fn_error $? "Using LunaSVG requires C++17 or later" "$LINENO" 5
+        fi
+
           ax_cxx_compile_alternatives="11 0x"    ax_cxx_compile_cxx11_required=true
   ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
@@ -16534,6 +16560,10 @@ $as_echo "#define HAVE_CXX11 1" >>confdefs.h
         ;;
 
     14)
+        if test "$wxUSE_LUNASVG" = "yes"; then
+            as_fn_error $? "Using LunaSVG requires C++17 or later" "$LINENO" 5
+        fi
+
           ax_cxx_compile_alternatives="14 1y"    ax_cxx_compile_cxx14_required=true
   ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
@@ -26532,8 +26562,8 @@ $as_echo "yes" >&6; }
         fi
         if test "$wxUSE_LIBJPEG" = "no"; then
                                                                                     tiff_jpeg_option=--disable-jpeg
-        else
-            tiff_jpeg_option=--enable-jpeg
+        elif test "$wxUSE_LIBJPEG" = "builtin"; then
+                                                tiff_jpeg_option=--with-jpeg-from-wx
         fi
 
 
@@ -27455,6 +27485,14 @@ fi
 if test "$wxUSE_NANOSVG" = "yes"; then
     $as_echo "#define wxUSE_NANOSVG 1" >>confdefs.h
 
+fi
+
+
+if test "$wxUSE_LUNASVG" = "yes"; then
+    $as_echo "#define wxUSE_LUNASVG 1" >>confdefs.h
+
+else
+    USE_LUNASVG=0
 fi
 
 if test "$wxUSE_XML" != "yes"; then
@@ -31302,19 +31340,19 @@ fi
                             if test "$wxUSE_GLCANVAS_EGL" != "no"; then
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for egl >= 1.5" >&5
-$as_echo_n "checking for egl >= 1.5... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for egl >= 1.4" >&5
+$as_echo_n "checking for egl >= 1.4... " >&6; }
 
 if test -n "$EGL_CFLAGS"; then
     pkg_cv_EGL_CFLAGS="$EGL_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"egl >= 1.5\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "egl >= 1.5") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"egl >= 1.4\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "egl >= 1.4") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_EGL_CFLAGS=`$PKG_CONFIG --cflags "egl >= 1.5" 2>/dev/null`
+  pkg_cv_EGL_CFLAGS=`$PKG_CONFIG --cflags "egl >= 1.4" 2>/dev/null`
               test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -31326,12 +31364,12 @@ if test -n "$EGL_LIBS"; then
     pkg_cv_EGL_LIBS="$EGL_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"egl >= 1.5\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "egl >= 1.5") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"egl >= 1.4\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "egl >= 1.4") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_EGL_LIBS=`$PKG_CONFIG --libs "egl >= 1.5" 2>/dev/null`
+  pkg_cv_EGL_LIBS=`$PKG_CONFIG --libs "egl >= 1.4" 2>/dev/null`
               test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -31352,24 +31390,24 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-            EGL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "egl >= 1.5" 2>&1`
+            EGL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "egl >= 1.4" 2>&1`
         else
-            EGL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "egl >= 1.5" 2>&1`
+            EGL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "egl >= 1.4" 2>&1`
         fi
     # Put the nasty error message in config.log where it belongs
     echo "$EGL_PKG_ERRORS" >&5
 
 
-                                        { $as_echo "$as_me:${as_lineno-$LINENO}: EGL 1.5+ not available. Will use GLX." >&5
-$as_echo "$as_me: EGL 1.5+ not available. Will use GLX." >&6;}
+                                        { $as_echo "$as_me:${as_lineno-$LINENO}: EGL 1.4+ not available. Will use GLX." >&5
+$as_echo "$as_me: EGL 1.4+ not available. Will use GLX." >&6;}
 
 
 elif test $pkg_failed = untried; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
-                                        { $as_echo "$as_me:${as_lineno-$LINENO}: EGL 1.5+ not available. Will use GLX." >&5
-$as_echo "$as_me: EGL 1.5+ not available. Will use GLX." >&6;}
+                                        { $as_echo "$as_me:${as_lineno-$LINENO}: EGL 1.4+ not available. Will use GLX." >&5
+$as_echo "$as_me: EGL 1.4+ not available. Will use GLX." >&6;}
 
 
 else
@@ -31379,7 +31417,7 @@ else
 $as_echo "yes" >&6; }
 
                                         OPENGL_LIBS="$OPENGL_LIBS $EGL_LIBS"
-                                        $as_echo "#define wxUSE_GLCANVAS_EGL 1" >>confdefs.h
+                                        $as_echo "#define wxHAS_EGL 1" >>confdefs.h
 
 
 pkg_failed=no
@@ -36004,17 +36042,33 @@ fi
 done
 
 
-                for ac_func in dl_iterate_phdr
-do :
-  ac_fn_c_check_func "$LINENO" "dl_iterate_phdr" "ac_cv_func_dl_iterate_phdr"
-if test "x$ac_cv_func_dl_iterate_phdr" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_DL_ITERATE_PHDR 1
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for dl_iterate_phdr" >&5
+$as_echo_n "checking for dl_iterate_phdr... " >&6; }
+if ${wx_cv_func_dl_iterate_phdr+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+                           #include <link.h>
+                           int main() { return dl_iterate_phdr(0, 0); }
 _ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  wx_cv_func_dl_iterate_phdr=yes
+else
+  wx_cv_func_dl_iterate_phdr=no
 
 fi
-done
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
 
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $wx_cv_func_dl_iterate_phdr" >&5
+$as_echo "$wx_cv_func_dl_iterate_phdr" >&6; }
+                if test "$wx_cv_func_dl_iterate_phdr" = "yes"; then
+                    $as_echo "#define HAVE_DL_ITERATE_PHDR 1" >>confdefs.h
+
+                fi
             fi
         fi
 
@@ -39879,6 +39933,22 @@ fi
 
 fi
 
+USE_LUNASVG=0
+if test "$wxUSE_LUNASVG" = "yes"; then
+   if ! test -f "$srcdir/3rdparty/lunasvg/include/lunasvg.h" ; then
+       as_fn_error $? "
+   The required lunasvg header was not found. You probably need to run
+
+       git submodule update --init 3rdparty/lunasvg
+
+   to fix this." "$LINENO" 5
+   fi
+
+   $as_echo "#define wxUSE_LUNASVG 1" >>confdefs.h
+
+   USE_LUNASVG=1
+fi
+
 if test "$wxUSE_MENUS" = "yes"; then
     $as_echo "#define wxUSE_MENUS 1" >>confdefs.h
 
@@ -41283,7 +41353,7 @@ $as_echo "$wx_cv_target_x86_64" >&6; }
     fi
 fi
 if test "$USE_DARWIN" = 1 -a "$wxUSE_MAC" != 1 -a "$wxUSE_OLD_COCOA" != 1 ; then
-    EXTRA_FRAMEWORKS="$EXTRA_FRAMEWORKS -framework IOKit -framework CoreServices -framework System -framework ApplicationServices -framework Foundation"
+    EXTRA_FRAMEWORKS="$EXTRA_FRAMEWORKS -framework AppKit -framework IOKit -framework CoreServices -framework System -framework ApplicationServices -framework Foundation"
 fi
 
 LDFLAGS="$LDFLAGS $EXTRA_FRAMEWORKS"
@@ -43424,6 +43494,11 @@ EOF
         COND_SHARED_0_TOOLKIT_MSW_WXUNIV_0=""
     fi
 
+    COND_SHARED_0_USE_GUI_1_USE_LUNASVG_1="#"
+    if test "x$SHARED" = "x0" -a "x$USE_GUI" = "x1" -a "x$USE_LUNASVG" = "x1" ; then
+        COND_SHARED_0_USE_GUI_1_USE_LUNASVG_1=""
+    fi
+
     COND_SHARED_0_USE_GUI_1_USE_OPENGL_1="#"
     if test "x$SHARED" = "x0" -a "x$USE_GUI" = "x1" -a "x$USE_OPENGL" = "x1" ; then
         COND_SHARED_0_USE_GUI_1_USE_OPENGL_1=""
@@ -43482,11 +43557,6 @@ EOF
     COND_SHARED_1_USE_GUI_1_USE_OPENGL_1="#"
     if test "x$SHARED" = "x1" -a "x$USE_GUI" = "x1" -a "x$USE_OPENGL" = "x1" ; then
         COND_SHARED_1_USE_GUI_1_USE_OPENGL_1=""
-    fi
-
-    COND_TOOLKIT_="#"
-    if test "x$TOOLKIT" = "x" ; then
-        COND_TOOLKIT_=""
     fi
 
     COND_TOOLKIT_COCOA="#"
@@ -43664,6 +43734,11 @@ EOF
         COND_USE_GUI_1=""
     fi
 
+    COND_USE_GUI_1_USE_LUNASVG_1="#"
+    if test "x$USE_GUI" = "x1" -a "x$USE_LUNASVG" = "x1" ; then
+        COND_USE_GUI_1_USE_LUNASVG_1=""
+    fi
+
     COND_USE_GUI_1_USE_OPENGL_1="#"
     if test "x$USE_GUI" = "x1" -a "x$USE_OPENGL" = "x1" ; then
         COND_USE_GUI_1_USE_OPENGL_1=""
@@ -43697,6 +43772,11 @@ EOF
     COND_USE_GUI_1_wxUSE_LIBWEBP_builtin="#"
     if test "x$USE_GUI" = "x1" -a "x$wxUSE_LIBWEBP" = "xbuiltin" ; then
         COND_USE_GUI_1_wxUSE_LIBWEBP_builtin=""
+    fi
+
+    COND_USE_LUNASVG_1="#"
+    if test "x$USE_LUNASVG" = "x1" ; then
+        COND_USE_LUNASVG_1=""
     fi
 
     COND_USE_OPENGL_1="#"

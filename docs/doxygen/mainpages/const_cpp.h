@@ -43,6 +43,9 @@ while <tt>\__WINDOWS__</tt> should be used for the platform tests.}
 @itemdef{\__WXOSX_IPHONE__, iPhone (UIKit)}
 @itemdef{\__WXOSX_COCOA__, macOS using Cocoa (AppKit)}
 @itemdef{\__WXOSX_MAC__, macOS (Cocoa)}
+@itemdef{\__WXDARWIN__, wxBase built on macOS or iPhone, synonym of <tt>\__DARWIN__</tt> (see below). This constant is available since wxWidgets 3.3.2.}
+@itemdef{\__WXDARWIN_OSX__, wxBase built on macOS (can be used for with Apple and non-Apple GUIs). This constant is available since wxWidgets 3.3.2.}
+@itemdef{\__WXDARWIN_IPHONE__, wxBase built on iPhone. This constant is available since wxWidgets 3.3.2.}
 @itemdef{\__WXPM__, OS/2 native Presentation Manager (not used any longer).}
 @itemdef{\__WXXT__, Xt; mutually exclusive with WX_MOTIF, not implemented in wxWidgets 2.x}
 @itemdef{\__WXX11__, wxX11 (<tt>\__WXUNIVERSAL__</tt> will be also defined)}
@@ -184,6 +187,10 @@ Currently the following symbols exist:
     ever, be necessary to use this symbol directly, functions such as
     wxWindow::FromDIP() and wxBitmap::GetLogicalSize() exist to hide the
     differences between the platforms with and without DPI-independent pixels.}
+@itemdef{wxHAS_EGL, Defined if wxGLCanvas may use EGL for OpenGL context
+    creation (this symbol only exists in wxWidgets 3.3.2 and later).}
+@itemdef{wxHAS_GLX, Defined if wxGLCanvas may use GLX for OpenGL context
+    creation (this symbol only exists in wxWidgets 3.3.2 and later).}
 @itemdef{wxHAS_IMAGE_RESOURCES, Defined if wxICON() and wxBITMAP() macros use
     images from (Windows) resources. Otherwise, these macros use XPMs.}
 @itemdef{wxHAS_MEMBER_DEFAULT, Defined if the currently used compiler supports
@@ -436,6 +443,11 @@ more details.
          developers, but can also be used by the applications if they want to
          opt in into getting more help from compiler. Support for this symbol
          appeared in wxWidgets 3.3.0.}
+@itemdef{wxNO_WIN32_W,
+        this symbol is not defined by wxWidgets itself, but can be defined by
+        the applications using the library to not inline the WIDE win32 API
+        functions in wx/msw/winundef.h, but inline the ANSI functions instead.
+        This constant is available since wxWidgets 3.3.2.}
 @endDefList
 
 */

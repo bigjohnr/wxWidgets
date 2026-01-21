@@ -39,7 +39,7 @@
 #   endif
 #endif
 
-#if ( !wxUSE_GUI && !wxOSX_USE_IPHONE ) || wxOSX_USE_COCOA_OR_CARBON
+#if ( !wxUSE_GUI && !defined(__WXOSX_IPHONE__) ) || defined(__WXOSX_COCOA__)
 
 // Carbon functions are currently still used in wxOSX/Cocoa too (including
 // wxBase part of it).
@@ -66,9 +66,9 @@ WXDLLIMPEXP_BASE NSString* wxNSStringWithWxString(const wxString &wxstring);
 
 WXDLLIMPEXP_BASE CFURLRef wxOSXCreateURLFromFileSystemPath( const wxString& path);
 
-#if wxUSE_GUI
+#if wxUSE_GUI && defined(__WXOSX__)
 
-#if !wxOSX_USE_IPHONE
+#if !defined(__WXOSX_IPHONE__)
 #include <ApplicationServices/ApplicationServices.h>
 #endif
 
@@ -124,13 +124,20 @@ WXDLLIMPEXP_CORE double wxOSXGetMainScreenContentScaleFactor();
 
 // UI
 
+WXColor WXDLLIMPEXP_CORE wxOSXGetWXColorFromCGColor(CGColorRef col);
+WXImage WXDLLIMPEXP_CORE wxOSXGetWXImageFromCGColor(CGColorRef col);
+
 CGSize WXDLLIMPEXP_CORE wxOSXGetImageSize(WXImage image);
 CGImageRef WXDLLIMPEXP_CORE wxOSXCreateCGImageFromImage( WXImage nsimage, double *scale = nullptr );
 CGImageRef WXDLLIMPEXP_CORE wxOSXGetCGImageFromImage( WXImage nsimage, CGRect* r, CGContextRef cg);
 CGContextRef WXDLLIMPEXP_CORE wxOSXCreateBitmapContextFromImage( WXImage nsimage, bool *isTemplate = nullptr);
 WXImage WXDLLIMPEXP_CORE wxOSXGetImageFromCGImage( CGImageRef image, double scale = 1.0, bool isTemplate = false);
 double WXDLLIMPEXP_CORE wxOSXGetImageScaleFactor(WXImage image);
-
+wxBitmapBundle WXDLLIMPEXP_CORE wxOSXCreateSystemBitmapBundle(const wxString& name, const wxSize& size);
+WXImage WXDLLIMPEXP_CORE wxOSXGetSystemImage(const wxString& name);
+wxBitmapBundle WXDLLIMPEXP_CORE wxOSXCreateSystemBitmapBundle(const wxString& id, const wxString &client, const wxSize& size);
+void WXDLLIMPEXP_CORE wxOSXDrawImage(CGContextRef inContext, const CGRect* inBounds, WXImage inImage, wxCompositionMode composition) ;
+bool WXDLLIMPEXP_CORE wxOSXGetCGBlendMode(wxCompositionMode op, wxInt32& mode);
 
 class wxWindowMac;
 // to
@@ -1043,15 +1050,19 @@ protected :
     wxDECLARE_ABSTRACT_CLASS(wxNonOwnedWindowImpl);
 };
 
-#endif // wxUSE_GUI
+#endif // __WXOSX__
 
 //---------------------------------------------------------------------------
 // cocoa bridging utilities
 //---------------------------------------------------------------------------
 
-bool wxMacInitCocoa();
+#ifdef __WXDARWIN_OSX__
 
-class WXDLLIMPEXP_CORE wxMacAutoreleasePool
+bool WXDLLIMPEXP_BASE wxMacInitCocoa();
+
+#endif // __WXDARWIN_OSX__
+
+class WXDLLIMPEXP_BASE wxMacAutoreleasePool
 {
 public :
     wxMacAutoreleasePool();
@@ -1062,9 +1073,9 @@ private :
 
 // NSObject
 
-void wxMacCocoaRelease( void* obj );
-void wxMacCocoaAutorelease( void* obj );
-void* wxMacCocoaRetain( void* obj );
+void WXDLLIMPEXP_BASE wxMacCocoaRelease( void* obj );
+void WXDLLIMPEXP_BASE wxMacCocoaAutorelease( void* obj );
+void* WXDLLIMPEXP_BASE wxMacCocoaRetain( void* obj );
 
 // shared_ptr like API for NSObject and subclasses
 template <class T>

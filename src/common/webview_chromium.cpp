@@ -96,8 +96,6 @@ constexpr const char* TRACE_CEF = "cef";
 
 } // anonymous namespace
 
-extern WXDLLIMPEXP_DATA_WEBVIEW(const char) wxWebViewBackendChromium[] = "wxWebViewChromium";
-
 bool wxWebViewChromium::ms_cefInitialized = false;
 
 wxIMPLEMENT_DYNAMIC_CLASS(wxWebViewChromium, wxWebView);
@@ -580,7 +578,7 @@ private:
 class SchemeHandler : public CefResourceHandler
 {
 public:
-    SchemeHandler(const wxSharedPtr<wxWebViewHandler>& handler) : m_handler(handler), m_offset(0) {}
+    SchemeHandler(const wxSharedPtr<wxWebViewHandler>& handler) : m_handler(handler) {}
 
     // CefResourceHandler methods
     virtual bool ProcessRequest(CefRefPtr<CefRequest> request,
@@ -605,7 +603,6 @@ private:
 
     std::string m_data;
     std::string m_mime_type;
-    size_t m_offset;
 
     IMPLEMENT_REFCOUNTING(SchemeHandler);
     base::Lock m_lock;

@@ -320,6 +320,7 @@ DEFAULT_wxUSE_LIBMSPACK=no
 DEFAULT_wxUSE_LIBSDL=no
 DEFAULT_wxUSE_LIBLZMA=no
 DEFAULT_wxUSE_CAIRO=no
+DEFAULT_wxUSE_LUNASVG=no
 
 dnl features disabled by default
 DEFAULT_wxUSE_ACCESSIBILITY=no
@@ -541,6 +542,7 @@ WX_ARG_WITH(libnotify,     [  --with-libnotify        use libnotify for notifica
 WX_ARG_WITH(opengl,        [  --with-opengl           use OpenGL (or Mesa)], wxUSE_OPENGL)
 WX_ARG_WITH(xtest,         [  --with-xtest            use XTest extension], wxUSE_XTEST)
 WX_ARG_WITH(nanosvg,       [  --with-nanosvg          use NanoSVG for rasterizing SVG], wxUSE_NANOSVG)
+WX_ARG_WITH(lunasvg,       [  --with-lunasvg          use LunaSVG for rasterizing SVG], wxUSE_LUNASVG)
 
 if test "$wxUSE_GTK" = 1 -o "$wxUSE_X11" = 1; then
     wx_needs_cairo_for_gc=1
@@ -1126,10 +1128,18 @@ case "${wxWITH_CXX-$wxDEFAULT_CXXSTD}" in
             AC_MSG_ERROR([Using wxWebView Chromium backend requires C++14 or later.])
         fi
 
+        if test "$wxUSE_LUNASVG" = "yes"; then
+            AC_MSG_ERROR([Using LunaSVG requires C++17 or later])
+        fi
+
         AX_CXX_COMPILE_STDCXX(11)
         ;;
 
     14)
+        if test "$wxUSE_LUNASVG" = "yes"; then
+            AC_MSG_ERROR([Using LunaSVG requires C++17 or later])
+        fi
+
         AX_CXX_COMPILE_STDCXX(14)
         ;;
 
@@ -2656,8 +2666,11 @@ if test "$wxUSE_LIBTIFF" != "no" ; then
             dnl the top-level script to all the other ones called recursively), so
             dnl we need to hack around this
             tiff_jpeg_option=--disable-jpeg
-        else
-            tiff_jpeg_option=--enable-jpeg
+        elif test "$wxUSE_LIBJPEG" = "builtin"; then
+            dnl JPEG support is enabled by default, but make sure that we use
+            dnl our own libjpeg, even if another version of the library is
+            dnl installed system-wide
+            tiff_jpeg_option=--with-jpeg-from-wx
         fi
 
         dnl if you ever want to enable webp, check if it clashes with the wxUSE_LIBWBP setting
@@ -2756,6 +2769,16 @@ dnl ------------------------------------------------------------------------
 
 if test "$wxUSE_NANOSVG" = "yes"; then
     AC_DEFINE(wxUSE_NANOSVG)
+fi
+
+dnl ------------------------------------------------------------------------
+dnl Check for LunaSVG libraries
+dnl ------------------------------------------------------------------------
+
+if test "$wxUSE_LUNASVG" = "yes"; then
+    AC_DEFINE(wxUSE_LUNASVG)
+else
+    USE_LUNASVG=0
 fi
 
 dnl ------------------------------------------------------------------------
@@ -3458,10 +3481,10 @@ if test "$wxUSE_OPENGL" = "yes" -o "$wxUSE_OPENGL" = "auto"; then
 
                         if test "$WXGTK3" = 1; then
                             if test "$wxUSE_GLCANVAS_EGL" != "no"; then
-                                PKG_CHECK_MODULES(EGL, [egl >= 1.5],
+                                PKG_CHECK_MODULES(EGL, [egl >= 1.4],
                                     [
                                         OPENGL_LIBS="$OPENGL_LIBS $EGL_LIBS"
-                                        AC_DEFINE(wxUSE_GLCANVAS_EGL)
+                                        AC_DEFINE(wxHAS_EGL)
                                         PKG_CHECK_MODULES(WAYLAND_EGL, [wayland-egl],
                                             [
                                                 if test $wx_cv_gdk_wayland = "yes"; then
@@ -3473,7 +3496,7 @@ if test "$wxUSE_OPENGL" = "yes" -o "$wxUSE_OPENGL" = "auto"; then
                                         )
                                     ],
                                     [
-                                        AC_MSG_NOTICE([EGL 1.5+ not available. Will use GLX.])
+                                        AC_MSG_NOTICE([EGL 1.4+ not available. Will use GLX.])
                                     ]
                                 )
                                 if test "$have_wayland" != 1; then
@@ -5055,7 +5078,20 @@ else
                     ]
                 )
 
-                AC_CHECK_FUNCS(dl_iterate_phdr)
+                AC_CACHE_CHECK(
+                    [for dl_iterate_phdr],
+                    wx_cv_func_dl_iterate_phdr,
+                    AC_LINK_IFELSE(
+                        [AC_LANG_SOURCE([
+                           #include <link.h>
+                           int main() { return dl_iterate_phdr(0, 0); }])],
+                        [wx_cv_func_dl_iterate_phdr=yes],
+                        [wx_cv_func_dl_iterate_phdr=no]
+                    )
+                )
+                if test "$wx_cv_func_dl_iterate_phdr" = "yes"; then
+                    AC_DEFINE(HAVE_DL_ITERATE_PHDR)
+                fi
             fi
         fi
 
@@ -6956,6 +6992,21 @@ if test "$wxUSE_STC" = "yes"; then
    AC_SUBST(COND_PYTHON)
 fi
 
+USE_LUNASVG=0
+if test "$wxUSE_LUNASVG" = "yes"; then
+   if ! test -f "$srcdir/3rdparty/lunasvg/include/lunasvg.h" ; then
+       AC_MSG_ERROR([
+   The required lunasvg header was not found. You probably need to run
+
+       git submodule update --init 3rdparty/lunasvg
+
+   to fix this.])
+   fi
+
+   AC_DEFINE(wxUSE_LUNASVG)
+   USE_LUNASVG=1
+fi
+
 if test "$wxUSE_MENUS" = "yes"; then
     AC_DEFINE(wxUSE_MENUS)
     if test "$wxUSE_MENUBAR" = "yes"; then
@@ -7724,7 +7775,7 @@ if test "$wxUSE_MAC" = 1 ; then
     fi
 fi
 if test "$USE_DARWIN" = 1 -a "$wxUSE_MAC" != 1 -a "$wxUSE_OLD_COCOA" != 1 ; then
-    EXTRA_FRAMEWORKS="$EXTRA_FRAMEWORKS -framework IOKit -framework CoreServices -framework System -framework ApplicationServices -framework Foundation"
+    EXTRA_FRAMEWORKS="$EXTRA_FRAMEWORKS -framework AppKit -framework IOKit -framework CoreServices -framework System -framework ApplicationServices -framework Foundation"
 fi
 
 LDFLAGS="$LDFLAGS $EXTRA_FRAMEWORKS"

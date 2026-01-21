@@ -199,12 +199,22 @@ bool wxGLContext::SetCurrent(const wxGLCanvas& win) const
     if ( !m_glContext )
         return false;
 
-    [m_glContext setView: win.GetHandle() ];
-    [m_glContext update];
+    // View can only be set on the UI thread, but context can be set on any thread
+    if ( wxIsMainThread() )
+    {
+        [m_glContext setView: win.GetHandle() ];
+        [m_glContext update];
+    }
 
     [m_glContext makeCurrentContext];
 
     return true;
+}
+
+/* static */
+void wxGLContextBase::ClearCurrent()
+{
+    [NSOpenGLContext clearCurrentContext];
 }
 
 #endif // wxUSE_GLCANVAS

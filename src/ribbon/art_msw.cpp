@@ -543,8 +543,8 @@ void wxRibbonMSWArtProvider::CloneTo(wxRibbonMSWArtProvider* copy) const
     copy->m_tab_hover_label_colour = m_tab_hover_label_colour;
     copy->m_tab_separator_colour = m_tab_separator_colour;
     copy->m_tab_separator_gradient_colour = m_tab_separator_gradient_colour;
-    copy->m_tab_active_background_colour = m_tab_hover_background_colour;
-    copy->m_tab_active_background_gradient_colour = m_tab_hover_background_gradient_colour;
+    copy->m_tab_active_background_colour = m_tab_active_background_colour;
+    copy->m_tab_active_background_gradient_colour = m_tab_active_background_gradient_colour;
     copy->m_tab_hover_background_colour = m_tab_hover_background_colour;
     copy->m_tab_hover_background_gradient_colour = m_tab_hover_background_gradient_colour;
     copy->m_tab_hover_background_top_colour = m_tab_hover_background_top_colour;
@@ -840,7 +840,7 @@ wxColour wxRibbonMSWArtProvider::GetColour(int id) const
         case wxRIBBON_ART_GALLERY_BUTTON_HOVER_BACKGROUND_TOP_COLOUR:
             return m_gallery_button_hover_background_top_brush.GetColour();
         case wxRIBBON_ART_GALLERY_BUTTON_HOVER_FACE_COLOUR:
-            return m_gallery_button_face_colour;
+            return m_gallery_button_hover_face_colour;
         case wxRIBBON_ART_GALLERY_BUTTON_ACTIVE_BACKGROUND_COLOUR:
             return m_gallery_button_active_background_colour;
         case wxRIBBON_ART_GALLERY_BUTTON_ACTIVE_BACKGROUND_GRADIENT_COLOUR:
@@ -1490,8 +1490,13 @@ void wxRibbonMSWArtProvider::DrawTab(
             int x = tab.rect.x + 3;
             if(m_flags & wxRIBBON_BAR_SHOW_PAGE_ICONS)
             {
-                x += 3 + tab.page->GetIcon().GetLogicalWidth();
-                width -= 3 + tab.page->GetIcon().GetLogicalWidth();
+                const wxBitmap& icon = tab.page->GetIcon();
+                if (icon.IsOk())
+                {
+                    const int iconWidth = icon.GetLogicalWidth();
+                    x += 3 + iconWidth;
+                    width -= 3 + iconWidth;
+                }
             }
             int y = tab.rect.y + (tab.rect.height - text_height) / 2;
 
