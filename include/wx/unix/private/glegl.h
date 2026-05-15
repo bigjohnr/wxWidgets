@@ -59,7 +59,11 @@ public:
 
     virtual bool SwapBuffers() override;
 
+    virtual wxGLCanvas::SwapInterval DoSetSwapInterval(int interval) override;
+    virtual int GetSwapInterval() const override;
+
     virtual void OnRealized() override;
+    virtual void OnUnrealized() override;
 
     virtual bool HasWindow() const override;
 
@@ -102,9 +106,26 @@ private:
     // fall back on eglCreateWindowSurface() otherwise.
     //
     // This function uses m_display and m_config which must be initialized
-    // before using it and should be passed either m_xwindow or m_wlEGLWindow
-    // depending on whether we are using X11 or Wayland.
-    EGLSurface CallCreatePlatformWindowSurface(void *window) const;
+    // before using it.
+    //
+    // Window parameter is passed twice because some of the functions above
+    // take it by value while others take it by pointer and this depends on
+    // whether we use X11 or Wayland. Use wrappers below taking correct window
+    // type instead of calling this function directly.
+    EGLSurface
+    DoCallCreatePlatformWindowSurface(wxUIntPtr windowID, void* windowPtr) const;
+
+    // This one is for X11.
+    EGLSurface CallCreatePlatformWindowSurface(wxUIntPtr xwindow) const
+    {
+        return DoCallCreatePlatformWindowSurface(xwindow, &xwindow);
+    }
+
+    // And this one is for Wayland.
+    EGLSurface CallCreatePlatformWindowSurface(struct wl_egl_window* window) const
+    {
+        return DoCallCreatePlatformWindowSurface(wxPtrToUInt(window), window);
+    }
 
 
     EGLConfig m_config = nullptr;
@@ -117,7 +138,6 @@ private:
     wl_subsurface *m_wlSubsurface = nullptr;
 
     bool m_readyToDraw = false;
-    bool m_swapIntervalSet = false;
 
     // Called from GTK callbacks and needs access to private members.
     friend void wxEGLUpdateGeometry(GtkWidget* widget, wxGLCanvasEGL* win);
@@ -143,6 +163,7 @@ public:
     CreateCanvasImpl(wxGLCanvasUnix* canvas) override;
 
     void ClearCurrentContext() override;
+    wxGLExtFunction GetProcAddress(const wxString& name) override;
 
     bool IsExtensionSupported(const char* extension) override;
     bool IsDisplaySupported(const wxGLAttributes& dispAttrs) override;

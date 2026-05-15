@@ -575,6 +575,9 @@ bool wxWindowQt::Reparent( wxWindowBase *parent )
 
 void wxWindowQt::Raise()
 {
+    if ( !IsShown() )
+        return;
+
     GetHandle()->raise();
 }
 
@@ -651,6 +654,18 @@ void wxWindowQt::Refresh( bool WXUNUSED( eraseBackground ), const wxRect *rect )
             }
         }
     }
+}
+
+void wxWindowQt::ClearBackground()
+{
+    if ( !GetHandle()->autoFillBackground() )
+    {
+        // Rely on Qt to do the right thing with clearing the background.
+        GetHandle()->setAutoFillBackground(true);
+        GetHandle()->setAutoFillBackground(false);
+    }
+    // else: No need to do anything because Qt will fill the background
+    //       of the widget before invoking the paint event anyhow.
 }
 
 bool wxWindowQt::SetCursor( const wxCursor &cursor )
@@ -1266,13 +1281,11 @@ void wxWindowQt::DoSetClientSize(int width, int height)
     QWidget *qtWidget = QtGetClientWidget();
     wxCHECK_RET( qtWidget, "window must be created" );
 
-    if ( qtWidget != GetHandle() )
-    {
-        int x, y;
-        DoGetPosition(&x, &y);
-        // Ensure that this window is correctly positioned in RTL layout.
-        DoMoveWindow(x, y, width, height);
-    }
+    int x, y;
+    DoGetPosition(&x, &y);
+    DoMoveWindow(x, y, width, height);
+
+    // Ensure that this window is correctly positioned in RTL layout.
 
     QRect geometry = qtWidget->geometry();
     const int dx = width - geometry.width();

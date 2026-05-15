@@ -716,6 +716,12 @@ public:
      */
     virtual void SetElementSize(int elementId, int size) = 0;
 
+    /**
+        Show a drop down menu with the given items.
+
+        @return ID of the item selected in the menu or -1 if the menu was
+            dismissed
+     */
     virtual int ShowDropDown(
                          wxWindow* wnd,
                          const wxAuiToolBarItemArray& items) = 0;
@@ -874,13 +880,27 @@ public:
                 const wxRect& rect,
                 int state);
 
+    /**
+        Return the size of the label for the given item.
+
+        Note that the type of @a dc was wxDC until wxWidgets 3.3.0, where it
+        was changed to wxReadOnlyDC as this function doesn't modify the DC
+        contents.
+     */
     virtual wxSize GetLabelSize(
-                wxDC& dc,
+                wxReadOnlyDC& dc,
                 wxWindow* wnd,
                 const wxAuiToolBarItem& item);
 
+    /**
+        Return the size of the given item.
+
+        Note that the type of @a dc was wxDC until wxWidgets 3.3.0, where it
+        was changed to wxReadOnlyDC as this function doesn't modify the DC
+        contents.
+     */
     virtual wxSize GetToolSize(
-                wxDC& dc,
+                wxReadOnlyDC& dc,
                 wxWindow* wnd,
                 const wxAuiToolBarItem& item);
 

@@ -548,6 +548,23 @@ wxWebRequest::Result wxWebRequestCURL::DoFinishPrepare()
                      basicAuthCred.GetUser());
         wxCURLSetOpt(m_handle, CURLOPT_PASSWORD,
                      basicAuthCred.GetPassword().GetAsString());
+
+        const wxWebProxy& proxy = GetSessionImpl().GetProxy();
+        if ( proxy.GetType() == wxWebProxy::Type::URL )
+        {
+            // If we're using proxy, we should set credentials for it too,
+            // otherwise we'd still use more than one request.
+            const wxURI proxyURL(proxy.GetURL());
+            if ( proxyURL.HasUserInfo() )
+            {
+                wxCURLSetOpt(m_handle, CURLOPT_PROXYAUTH, CURLAUTH_BASIC);
+
+                wxCURLSetOpt(m_handle, CURLOPT_PROXYUSERNAME,
+                             proxyURL.GetUser());
+                wxCURLSetOpt(m_handle, CURLOPT_PROXYPASSWORD,
+                             proxyURL.GetPassword());
+            }
+        }
     }
 
     wxCURLSetOpt(m_handle, CURLOPT_HTTPAUTH, httpAuthMethod);
@@ -1623,7 +1640,16 @@ void wxWebSessionCURL::CheckForCompletedTransfers()
             {
                 wxWebRequestCURL* request = it->second;
                 curl_multi_remove_handle(m_handle, curl);
-                request->HandleCompletion();
+                if ( msg->data.result != CURLE_OK )
+                {
+                    wxString errorMsg = wxString::Format("libcurl error: %s",
+                        curl_easy_strerror(msg->data.result));
+                    request->SetState(wxWebRequest::State_Failed, errorMsg);
+                }
+                else
+                {
+                    request->HandleCompletion();
+                }
                 m_activeTransfers.erase(it);
                 RemoveActiveSocket(curl);
             }

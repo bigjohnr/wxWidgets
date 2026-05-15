@@ -342,6 +342,11 @@ void wxGLBackendEGL::ClearCurrentContext()
                    EGL_NO_SURFACE, EGL_NO_CONTEXT);
 }
 
+wxGLExtFunction wxGLBackendEGL::GetProcAddress(const wxString& name)
+{
+    return eglGetProcAddress(name.utf8_str());
+}
+
 // ============================================================================
 // wxGLCanvasEGL implementation
 // ============================================================================
@@ -378,13 +383,17 @@ EGLDisplay wxGLCanvasEGL::GetDisplay()
                 eglQueryString(nullptr, EGL_EXTENSIONS),
                 "EGL_EXT_platform_base") )
         {
-            s_eglGetPlatformDisplay = reinterpret_cast<GetPlatformDisplayFunc>(
-                    eglGetProcAddress("eglGetPlatformDisplay"));
+            s_eglGetPlatformDisplay =
+                wxGLContext::GetProcAddress<GetPlatformDisplayFunc>(
+                    "eglGetPlatformDisplay"
+                );
             if ( !s_eglGetPlatformDisplay )
             {
                 // Try the fallback if not available.
-                s_eglGetPlatformDisplay = reinterpret_cast<GetPlatformDisplayFunc>(
-                    eglGetProcAddress("eglGetPlatformDisplayEXT"));
+                s_eglGetPlatformDisplay =
+                    wxGLContext::GetProcAddress<GetPlatformDisplayFunc>(
+                        "eglGetPlatformDisplayEXT"
+                    );
             }
         }
     }
@@ -439,8 +448,24 @@ void wxGLCanvasEGL::UpdateSubsurfacePosition()
         return;
     }
 
+    // We need to position the subsurface at the canvas window position inside
+    // its top level ancestor, so get it by computing the offset between the
+    // canvas origin and the window origin.
+    //
+    // We could also use gtk_widget_translate_coordinates() or call
+    // gdk_window_get_position() recursively until we reach the top level
+    // ancestor, but this way is even simpler and seems to work fine.
+    GtkWidget* const toplevel = gtk_widget_get_toplevel(m_canvas->m_widget);
+
+    int tlwx, tlwy;
+    gdk_window_get_origin(gtk_widget_get_window(toplevel), &tlwx, &tlwy);
+
     int x, y;
     gdk_window_get_origin(m_canvas->GTKGetDrawingWindow(), &x, &y);
+
+    x -= tlwx;
+    y -= tlwy;
+
     wl_subsurface_set_position(m_wlSubsurface, x, y);
 }
 
@@ -526,7 +551,9 @@ static void gtk_glcanvas_scale_factor_notify(GtkWidget* widget,
 } // extern "C"
 #endif // GDK_WINDOWING_WAYLAND
 
-EGLSurface wxGLCanvasEGL::CallCreatePlatformWindowSurface(void *window) const
+EGLSurface
+wxGLCanvasEGL::DoCallCreatePlatformWindowSurface(wxUIntPtr windowID,
+                                                 void* windowPtr) const
 {
     // Type of eglCreatePlatformWindowSurface[EXT]().
     typedef EGLSurface (*CreatePlatformWindowSurface)(EGLDisplay display,
@@ -541,8 +568,10 @@ EGLSurface wxGLCanvasEGL::CallCreatePlatformWindowSurface(void *window) const
         static CreatePlatformWindowSurface s_eglCreatePlatformWindowSurface = nullptr;
         if ( !s_eglCreatePlatformWindowSurface )
         {
-            s_eglCreatePlatformWindowSurface = reinterpret_cast<CreatePlatformWindowSurface>(
-                eglGetProcAddress("eglCreatePlatformWindowSurface"));
+            s_eglCreatePlatformWindowSurface =
+                wxGLContext::GetProcAddress<CreatePlatformWindowSurface>(
+                    "eglCreatePlatformWindowSurface"
+                );
         }
 
         // This check is normally superfluous but avoid crashing just in case
@@ -550,7 +579,7 @@ EGLSurface wxGLCanvasEGL::CallCreatePlatformWindowSurface(void *window) const
         if ( s_eglCreatePlatformWindowSurface )
         {
             return s_eglCreatePlatformWindowSurface(m_display, m_config,
-                                                    window,
+                                                    windowPtr,
                                                     nullptr);
         }
     }
@@ -564,21 +593,23 @@ EGLSurface wxGLCanvasEGL::CallCreatePlatformWindowSurface(void *window) const
 
         if ( wxGLBackendEGL_instance.IsExtensionSupported("EGL_EXT_platform_base") )
         {
-            s_eglCreatePlatformWindowSurfaceEXT = reinterpret_cast<CreatePlatformWindowSurface>(
-                eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT"));
+            s_eglCreatePlatformWindowSurfaceEXT =
+                wxGLContext::GetProcAddress<CreatePlatformWindowSurface>(
+                    "eglCreatePlatformWindowSurfaceEXT"
+                );
         }
     }
 
     if ( s_eglCreatePlatformWindowSurfaceEXT )
     {
         return s_eglCreatePlatformWindowSurfaceEXT(m_display, m_config,
-                                                   window,
+                                                   windowPtr,
                                                    nullptr);
     }
     else
     {
         return eglCreateWindowSurface(m_display, m_config,
-                                      reinterpret_cast<EGLNativeWindowType>(window),
+                                      reinterpret_cast<EGLNativeWindowType>(windowID),
                                       nullptr);
     }
 }
@@ -598,12 +629,12 @@ void wxGLCanvasEGL::OnRealized()
     {
         if ( m_surface != EGL_NO_SURFACE )
         {
-            eglDestroySurface(m_surface, m_display);
+            eglDestroySurface(m_display, m_surface);
             m_surface = EGL_NO_SURFACE;
         }
 
         m_xwindow = GDK_WINDOW_XID(window);
-        m_surface = CallCreatePlatformWindowSurface(&m_xwindow);
+        m_surface = CallCreatePlatformWindowSurface(m_xwindow);
     }
 #endif
 #ifdef GDK_WINDOWING_WAYLAND
@@ -670,9 +701,43 @@ void wxGLCanvasEGL::OnRealized()
     }
 }
 
+void wxGLCanvasEGL::OnUnrealized()
+{
+    // We would destroy the surface anyhow either in OnRealized() or in the
+    // dtor, but do it here as well just to free it sooner, in case the window
+    // remains unrealized for some time.
+    //
+    // Do it only for X11 as we don't recreate the surface under Wayland.
+#ifdef GDK_WINDOWING_X11
+    if ( m_canvas && wxGTKImpl::IsX11(m_canvas->GTKGetDrawingWindow()) )
+    {
+        if ( m_surface != EGL_NO_SURFACE )
+        {
+            eglDestroySurface(m_display, m_surface);
+            m_surface = EGL_NO_SURFACE;
+        }
+    }
+#endif // GDK_WINDOWING_X11
+}
+
 wxGLCanvasEGL::~wxGLCanvasEGL()
 {
-    if ( m_surface )
+#ifdef GDK_WINDOWING_WAYLAND
+    // Our "unmap" signal handler would be called from wxWindow dtor, so
+    // disconnect it to avoid accessing this object when it's already destroyed
+    // by wxGLCanvas dtor (and it is useless anyhow now as all it does is to
+    // call DestroyWaylandSubsurface() which we already do just below).
+    if ( m_canvas && m_canvas->m_widget )
+    {
+        g_signal_handlers_disconnect_by_func(
+            m_canvas->m_widget,
+            reinterpret_cast<gpointer>(gtk_glcanvas_unmap_callback),
+            this
+        );
+    }
+#endif // GDK_WINDOWING_WAYLAND
+
+    if ( m_surface != EGL_NO_SURFACE )
         eglDestroySurface(m_display, m_surface);
 #ifdef GDK_WINDOWING_WAYLAND
     DestroyWaylandSubsurface();
@@ -879,22 +944,13 @@ bool wxGLCanvasEGL::SwapBuffers()
     // entire application completely unusable just because one of its windows
     // using wxGLCanvas got occluded or unmapped (e.g. due to a move to another
     // workspace).
-    if ( !m_swapIntervalSet )
+    if ( m_swapIntervalToSet != wxGLCanvas::DefaultSwapInterval )
     {
-        // Ensure that eglSwapBuffers() doesn't block, as we use the surface
-        // callback to know when we should draw ourselves already.
-        if ( eglSwapInterval(m_display, 0) )
-        {
-            wxLogTrace(TRACE_EGL, "Set EGL swap interval to 0 for %p", this);
+        DoSetSwapInterval(m_swapIntervalToSet);
 
-            // It shouldn't be necessary to set it again.
-            m_swapIntervalSet = true;
-        }
-        else
-        {
-            wxLogTrace(TRACE_EGL, "eglSwapInterval(0) failed for %p: %#x",
-                       this, eglGetError());
-        }
+        // Don't set it again in any case, even if it failed, as it would just
+        // fail again the next time anyhow.
+        m_swapIntervalToSet = wxGLCanvas::DefaultSwapInterval;
     }
 
     GdkWindow* const window = m_canvas->GTKGetDrawingWindow();
@@ -927,6 +983,39 @@ bool wxGLCanvasEGL::SwapBuffers()
     wxLogTrace(TRACE_EGL, "Swapping buffers for window %p", this);
 
     return eglSwapBuffers(m_display, m_surface);
+}
+
+wxGLCanvas::SwapInterval wxGLCanvasEGL::DoSetSwapInterval(int interval)
+{
+    wxGLCanvas::SwapInterval result = wxGLCanvas::SwapInterval::Set;
+
+    if ( interval < 0 )
+    {
+        // Adaptive VSync is not supported by EGL yet, see
+        // https://github.com/KhronosGroup/EGL-Registry/pull/113
+        interval = -interval;
+
+        result = wxGLCanvas::SwapInterval::NonAdaptive;
+    }
+
+    if ( !eglSwapInterval(m_display, interval) )
+    {
+        wxLogTrace(TRACE_EGL, "eglSwapInterval(%d) failed for %p: %#x",
+                   interval, this, eglGetError());
+        return wxGLCanvas::SwapInterval::NotSet;
+    }
+
+    wxLogTrace(TRACE_EGL, "Set EGL swap interval to %d for %p", interval, this);
+
+    return result;
+}
+
+int wxGLCanvasEGL::GetSwapInterval() const
+{
+    // There doesn't seem to be a way to query the current swap interval in
+    // EGL, there are  EGL_MIN_SWAP_INTERVAL and EGL_MAX_SWAP_INTERVAL in
+    // EGLConfig, but not the current value.
+    return wxGLCanvas::DefaultSwapInterval;
 }
 
 bool wxGLCanvasEGL::HasWindow() const

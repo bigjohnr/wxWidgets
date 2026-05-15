@@ -1909,11 +1909,17 @@ public:
         m_tabCtrlHeight = h;
     }
 
-    // As we don't have a valid HWND, the base class version doesn't work for
-    // this window, so override it to return the appropriate DPI.
+    // As we don't have a valid HWND, base class implementations of these
+    // functions don't work for this window, so override them to forward to the
+    // real window.
     wxSize GetDPI() const override
     {
         return m_tabs->GetDPI();
+    }
+
+    wxLayoutDirection GetLayoutDirection() const override
+    {
+        return m_tabs->GetLayoutDirection();
     }
 
 protected:
@@ -2257,27 +2263,7 @@ void wxAuiNotebook::UpdateHintWindowSize()
 // calculates the size of the new split
 wxSize wxAuiNotebook::CalculateNewSplitSize()
 {
-    // One of the panes corresponds to the dummy window, the rest are tabs.
-    const int tab_ctrl_count = m_mgr.GetAllPanes().size() - 1;
-
-    wxSize new_split_size;
-
-    // if there is only one tab control, the first split
-    // should happen around the middle
-    if (tab_ctrl_count < 2)
-    {
-        new_split_size = GetClientSize();
-        new_split_size.x /= 2;
-        new_split_size.y /= 2;
-    }
-    else
-    {
-        // this is in place of a more complicated calculation
-        // that needs to be implemented
-        new_split_size = FromDIP(wxSize(180,180));
-    }
-
-    return new_split_size;
+    return m_mgr.CalculateNewSplitSize();
 }
 
 int wxAuiNotebook::CalculateTabCtrlHeight()
@@ -2943,8 +2929,6 @@ wxAuiNotebook::GetPagesInDisplayOrder(wxAuiTabCtrl* tabCtrl) const
 
 void wxAuiNotebook::Split(size_t page, int direction)
 {
-    wxSize cli_size = GetClientSize();
-
     // get the page's window pointer
     wxWindow* wnd = GetPage(page);
     if (!wnd)
@@ -2965,34 +2949,7 @@ void wxAuiNotebook::Split(size_t page, int direction)
     wxAuiTabFrame* new_tabs = CreateTabFrame(CalculateNewSplitSize());
     wxAuiTabCtrl* const dest_tabs = new_tabs->m_tabs;
 
-    // create a pane info structure with the information
-    // about where the pane should be added
-    wxAuiPaneInfo paneInfo = wxAuiPaneInfo().Bottom().CaptionVisible(false);
-    wxPoint mouse_pt;
-
-    if (direction == wxLEFT)
-    {
-        paneInfo.Left();
-        mouse_pt = wxPoint(0, cli_size.y/2);
-    }
-    else if (direction == wxRIGHT)
-    {
-        paneInfo.Right();
-        mouse_pt = wxPoint(cli_size.x, cli_size.y/2);
-    }
-    else if (direction == wxTOP)
-    {
-        paneInfo.Top();
-        mouse_pt = wxPoint(cli_size.x/2, 0);
-    }
-    else if (direction == wxBOTTOM)
-    {
-        paneInfo.Bottom();
-        mouse_pt = wxPoint(cli_size.x/2, cli_size.y);
-    }
-
-    m_mgr.AddPane(new_tabs, paneInfo, mouse_pt);
-    m_mgr.Update();
+    m_mgr.SplitPane(GetTabFrameFromTabCtrl(src_tabs), new_tabs, direction);
 
     // remove the page from the source tabs
     wxAuiNotebookPage page_info = *srcTabInfo.pageInfo;
@@ -3056,9 +3013,27 @@ void wxAuiNotebook::UnsplitAll()
 
     if ( changed )
     {
+        // We need to update the selection if the current page was in another
+        // tab control before, so force a selection change to ensure that the
+        // right page is shown.
+        m_curPage = wxNOT_FOUND;
+        int sel = tabMain->GetActivePage();
+        if ( sel == wxNOT_FOUND )
+        {
+            // Not sure if this can actually happen, but fall back to the first
+            // page if it does (note that we know that the main tab control is
+            // not empty as we must have added a page to it above for "changed"
+            // to be true).
+            sel = 0;
+        }
+
+        ChangeSelection(sel);
+
         RemoveEmptyTabFrames();
 
         DoSizing();
+
+        UpdateHintWindowSize();
     }
 }
 
@@ -3425,11 +3400,11 @@ void wxAuiNotebook::OnTabEndDrag(wxAuiTabCtrl* src_tabs, int src_idx)
 
             // If there is no tabframe at all, create one
             wxAuiTabFrame* new_tabs = CreateTabFrame(CalculateNewSplitSize());
+            m_mgr.SplitPane(GetTabFrameFromTabCtrl(src_tabs),
+                            new_tabs,
+                            wxBOTTOM,
+                            mouse_client_pt);
 
-            m_mgr.AddPane(new_tabs,
-                          wxAuiPaneInfo().Bottom().CaptionVisible(false),
-                          mouse_client_pt);
-            m_mgr.Update();
             dest_tabs = new_tabs->m_tabs;
             insert_idx = 0;
         }
@@ -3986,7 +3961,7 @@ namespace
 class wxAuiLayoutObject
 {
 public:
-    enum
+    enum DockDir
     {
         DockDir_Center,
         DockDir_Left,
@@ -4049,7 +4024,7 @@ public:
 
     wxSize m_size;
     const wxAuiPaneInfo *m_pInfo;
-    unsigned char m_dir;
+    DockDir m_dir;
 
     /*
         As the calculation is done from the inner to the outermost pane, the
@@ -4641,6 +4616,8 @@ wxAuiNotebook::LoadLayout(const wxString& name,
     // means we're reusing the existing pages and so don't need to do anything).
     if ( activeInMainTab )
         m_curPage = m_tabs.GetIdxFromWindow(activeInMainTab);
+
+    UpdateHintWindowSize();
 
     m_mgr.Update();
 }

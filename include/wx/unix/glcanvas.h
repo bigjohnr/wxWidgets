@@ -53,6 +53,8 @@ public:
     virtual ~wxGLCanvasUnix();
 
     virtual bool SwapBuffers() override;
+    virtual SwapInterval SetSwapInterval(int interval) override;
+    virtual int GetSwapInterval() const override;
 
     virtual bool IsShownOnScreen() const override;
 
@@ -90,8 +92,9 @@ protected:
 
     bool InitVisual(const wxGLAttributes& dispAttrs);
 
-    // This is only called by wxGTK but defined in any case.
+    // These functions are currently only called by wxGTK but always defined.
     void CallOnRealized();
+    void CallOnUnrealized();
 
 private:
     std::unique_ptr<wxGLCanvasUnixImpl> m_impl;

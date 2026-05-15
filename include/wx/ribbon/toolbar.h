@@ -15,6 +15,8 @@
 
 #include "wx/ribbon/control.h"
 #include "wx/ribbon/art.h"
+#include "wx/bmpbndl.h"
+
 #if wxUSE_RICHTOOLTIP
     #include "wx/richtooltip.h"
 #endif
@@ -62,29 +64,29 @@ public:
 
     virtual wxRibbonToolBarToolBase* AddTool(
                 int tool_id,
-                const wxBitmap& bitmap,
+                const wxBitmapBundle& bitmap,
                 const wxString& help_string,
                 wxRibbonButtonKind kind = wxRIBBON_BUTTON_NORMAL);
 
     virtual wxRibbonToolBarToolBase* AddDropdownTool(
                 int tool_id,
-                const wxBitmap& bitmap,
+                const wxBitmapBundle& bitmap,
                 const wxString& help_string = wxEmptyString);
 
     virtual wxRibbonToolBarToolBase* AddHybridTool(
                 int tool_id,
-                const wxBitmap& bitmap,
+                const wxBitmapBundle& bitmap,
                 const wxString& help_string = wxEmptyString);
 
     virtual wxRibbonToolBarToolBase* AddToggleTool(
                 int tool_id,
-                const wxBitmap& bitmap,
+                const wxBitmapBundle& bitmap,
                 const wxString& help_string = wxEmptyString);
 
     virtual wxRibbonToolBarToolBase* AddTool(
                 int tool_id,
-                const wxBitmap& bitmap,
-                const wxBitmap& bitmap_disabled = wxNullBitmap,
+                const wxBitmapBundle& bitmap,
+                const wxBitmapBundle& bitmap_disabled = wxBitmapBundle(),
                 const wxString& help_string = wxEmptyString,
                 wxRibbonButtonKind kind = wxRIBBON_BUTTON_NORMAL,
                 wxObject* client_data = nullptr);
@@ -94,33 +96,33 @@ public:
     virtual wxRibbonToolBarToolBase* InsertTool(
                 size_t pos,
                 int tool_id,
-                const wxBitmap& bitmap,
+                const wxBitmapBundle& bitmap,
                 const wxString& help_string,
                 wxRibbonButtonKind kind = wxRIBBON_BUTTON_NORMAL);
 
     virtual wxRibbonToolBarToolBase* InsertDropdownTool(
                 size_t pos,
                 int tool_id,
-                const wxBitmap& bitmap,
+                const wxBitmapBundle& bitmap,
                 const wxString& help_string = wxEmptyString);
 
     virtual wxRibbonToolBarToolBase* InsertHybridTool(
                 size_t pos,
                 int tool_id,
-                const wxBitmap& bitmap,
+                const wxBitmapBundle& bitmap,
                 const wxString& help_string = wxEmptyString);
 
     virtual wxRibbonToolBarToolBase* InsertToggleTool(
                 size_t pos,
                 int tool_id,
-                const wxBitmap& bitmap,
+                const wxBitmapBundle& bitmap,
                 const wxString& help_string = wxEmptyString);
 
     virtual wxRibbonToolBarToolBase* InsertTool(
                 size_t pos,
                 int tool_id,
-                const wxBitmap& bitmap,
-                const wxBitmap& bitmap_disabled = wxNullBitmap,
+                const wxBitmapBundle& bitmap,
+                const wxBitmapBundle& bitmap_disabled = wxBitmapBundle(),
                 const wxString& help_string = wxEmptyString,
                 wxRibbonButtonKind kind = wxRIBBON_BUTTON_NORMAL,
                 wxObject* client_data = nullptr);
@@ -151,8 +153,9 @@ public:
     virtual void SetRows(int nMin, int nMax = -1);
 
     virtual void SetToolClientData(int tool_id, wxObject* clientData);
-    virtual void SetToolDisabledBitmap(int tool_id, const wxBitmap &bitmap);
+    virtual void SetToolDisabledBitmap(int tool_id, const wxBitmapBundle &bitmap);
     virtual void SetToolHelpString(int tool_id, const wxString& helpString);
+<<<<<<< HEAD
 
 #if wxUSE_RICHTOOLTIP
     void SetRichToolTipInfo( wxRibbonToolBarToolBase* tool, 
@@ -166,6 +169,9 @@ public:
 #endif
 
     virtual void SetToolNormalBitmap(int tool_id, const wxBitmap &bitmap);
+=======
+    virtual void SetToolNormalBitmap(int tool_id, const wxBitmapBundle &bitmap);
+>>>>>>> 3d389bbbbfc592aa221f6cd3c4f11850626a6fa0
 
     virtual bool IsSizingContinuous() const override;
 
@@ -188,6 +194,7 @@ protected:
     void OnMouseUp(wxMouseEvent& evt);
     void OnPaint(wxPaintEvent& evt);
     void OnSize(wxSizeEvent& evt);
+    void OnDPIChanged(wxDPIChangedEvent& evt);
 
     virtual wxSize DoGetNextSmallerSize(wxOrientation direction,
                                       wxSize relative_to) const override;

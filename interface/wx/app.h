@@ -364,6 +364,9 @@ public:
 
         The return value of this function is currently ignored, return the same
         value as returned by the base class method if you override it.
+
+        NOTE: The base class method performs some cleanup - call it at the end
+        of your method if you override it.
     */
     virtual int OnExit();
 
@@ -1443,8 +1446,6 @@ public:
         - Toolbar items for which wxToolBar::SetDropdownMenu() was called
           don't draw the menu drop-down correctly, making it almost
           invisible.
-        - Calling wxMenu::Break() or wxMenuItem::SetDisabledBitmap() will result
-          in the menu being light.
 
         @param flags Can include @c wxApp::DarkMode_Always to force enabling
             dark mode for the application, even if the system doesn't use the
