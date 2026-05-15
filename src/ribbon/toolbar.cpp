@@ -608,8 +608,8 @@ void wxRibbonToolBar::SetToolHelpString(int tool_id, const wxString& helpString)
     tool->help_string = helpString;
 }
 
-<<<<<<< HEAD
 #if wxUSE_RICHTOOLTIP
+
 void wxRibbonToolBar::SetRichToolTipInfo( wxRibbonToolBarToolBase* tool, 
                                           const wxRichToolTipInfo& richTipInfo )
 {
@@ -640,10 +640,7 @@ const wxRichToolTipInfo& wxRibbonToolBar::GetRichToolTipInfo( int tool_id )
 
 #endif
 
-void wxRibbonToolBar::SetToolNormalBitmap(int tool_id, const wxBitmap &bitmap)
-=======
 void wxRibbonToolBar::SetToolNormalBitmap(int tool_id, const wxBitmapBundle &bitmap)
->>>>>>> 3d389bbbbfc592aa221f6cd3c4f11850626a6fa0
 {
     wxRibbonToolBarToolBase* tool = FindById(tool_id);
     wxCHECK_RET(tool != nullptr , "Invalid tool id");

@@ -155,7 +155,15 @@ public:
     virtual void SetToolClientData(int tool_id, wxObject* clientData);
     virtual void SetToolDisabledBitmap(int tool_id, const wxBitmapBundle &bitmap);
     virtual void SetToolHelpString(int tool_id, const wxString& helpString);
-<<<<<<< HEAD
+    virtual void SetToolNormalBitmap(int tool_id, const wxBitmapBundle &bitmap);
+
+    virtual bool IsSizingContinuous() const override;
+
+    virtual void EnableTool(int tool_id, bool enable = true);
+    virtual void ToggleTool(int tool_id, bool checked);
+
+    // Finds the best width and height given the parent's width and height
+    virtual wxSize GetBestSizeForParentSize(const wxSize& parentSize) const override;
 
 #if wxUSE_RICHTOOLTIP
     void SetRichToolTipInfo( wxRibbonToolBarToolBase* tool, 
@@ -167,19 +175,6 @@ public:
     const wxRichToolTipInfo& GetRichToolTipInfo( wxRibbonToolBarToolBase* tool );
     const wxRichToolTipInfo& GetRichToolTipInfo( int tool_id );
 #endif
-
-    virtual void SetToolNormalBitmap(int tool_id, const wxBitmap &bitmap);
-=======
-    virtual void SetToolNormalBitmap(int tool_id, const wxBitmapBundle &bitmap);
->>>>>>> 3d389bbbbfc592aa221f6cd3c4f11850626a6fa0
-
-    virtual bool IsSizingContinuous() const override;
-
-    virtual void EnableTool(int tool_id, bool enable = true);
-    virtual void ToggleTool(int tool_id, bool checked);
-
-    // Finds the best width and height given the parent's width and height
-    virtual wxSize GetBestSizeForParentSize(const wxSize& parentSize) const override;
 
 protected:
     friend class wxRibbonToolBarEvent;
