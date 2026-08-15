@@ -32,11 +32,13 @@
 #include "wx/log.h"
 #include "wx/gtk/private/webview_webkit2_extension.h"
 #include "wx/gtk/private/string.h"
+#include "wx/weakref.h"
 #include "wx/gtk/private/webkit.h"
 #include "wx/gtk/private/error.h"
 #include "wx/gtk/private/object.h"
 #include "wx/gtk/private/variant.h"
 #include "wx/private/jsscriptwrapper.h"
+#include "wx/scopedptr.h"
 #include <webkit2/webkit2.h>
 #include <JavaScriptCore/JSValueRef.h>
 #include <JavaScriptCore/JSStringRef.h>
@@ -499,7 +501,7 @@ wxgtk_webview_webkit_uri_scheme_request_cb(WebKitURISchemeRequest *request,
     {
         const wxString uri = wxString::FromUTF8(webkit_uri_scheme_request_get_uri(request));
 
-        wxFSFile* file = handler->GetFile(uri);
+        wxScopedPtr<wxFSFile> file(handler->GetFile(uri));
         if(file)
         {
             gint64 length = file->GetStream()->GetLength();
@@ -510,6 +512,7 @@ wxgtk_webview_webkit_uri_scheme_request_cb(WebKitURISchemeRequest *request,
                                                                        g_free);
             wxString mime = file->GetMimeType();
             webkit_uri_scheme_request_finish(request, stream, length, mime.utf8_str());
+            g_object_unref(stream);
         }
         else
         {
@@ -783,21 +786,21 @@ private:
 #ifdef wxHAVE_WEBKIT_WEBSITE_DATA_MANAGER
         if (wx_check_webkit_version(2, 10, 0))
         {
-            gchar* cachePath = nullptr;
-            gchar* dataPath = nullptr;
+            wxGtkString cachePath(nullptr);
+            wxGtkString dataPath(nullptr);
             if (!m_dataPath.empty())
             {
                 wxFileName configCachePath = wxFileName::DirName(m_dataPath);
                 configCachePath.AppendDir("cache");
-                cachePath = g_strdup(configCachePath.GetPath().utf8_str());
+                cachePath = wxGtkString(g_strdup(configCachePath.GetPath().utf8_str()));
                 wxFileName configDataPath = wxFileName::DirName(m_dataPath);
                 configDataPath.AppendDir("data");
-                dataPath = g_strdup(configDataPath.GetPath().utf8_str());
+                dataPath = wxGtkString(g_strdup(configDataPath.GetPath().utf8_str()));
             }
 
             m_websiteDataManager = webkit_website_data_manager_new(
-                "base-cache-directory", cachePath,
-                "base-data-directory", dataPath,
+                "base-cache-directory", cachePath.c_str(),
+                "base-data-directory", dataPath.c_str(),
                 nullptr);
             m_webContext = webkit_web_context_new_with_website_data_manager(m_websiteDataManager);
         }
@@ -1367,7 +1370,7 @@ wxString wxWebViewWebKit::GetPageSource() const
     if (source)
     {
         const wxString& wxs = wxString::FromUTF8((const char*)source, length);
-        free(source);
+        g_free(source);
         return wxs;
     }
     return wxString();
@@ -1465,8 +1468,9 @@ GtkPaperSize* wxWebViewGetGtkPaperSize(wxPaperSize paperId)
     wxSize paperSizeTenthsMM = wxThePrintPaperDatabase->GetSize(paperId);
     if (paperSizeTenthsMM.x > 0 && paperSizeTenthsMM.y > 0)
     {
+        // "custom" is the internal name; "Custom" is the user-visible label
         return gtk_paper_size_new_custom(
-            "custom", "Custom",
+            "custom", _("Custom").utf8_str(),
             paperSizeTenthsMM.x / 10.0, paperSizeTenthsMM.y / 10.0,
             GTK_UNIT_MM);
     }
@@ -1477,32 +1481,33 @@ GtkPaperSize* wxWebViewGetGtkPaperSize(wxPaperSize paperId)
 
 } // anonymous namespace
 
-void wxWebViewWebKit::Print(const wxPrintData& printData, int WXUNUSED(flags))
+static void wxApplyPrintData(WebKitPrintOperation* printop,
+                             GtkPrintSettings* settings,
+                             const wxPrintData& printData)
 {
-    wxGtkObject<WebKitPrintOperation> printop(webkit_print_operation_new(m_web_view));
-
-    // Use GtkPageSetup for paper size and orientation
     wxGtkObject<GtkPageSetup> pageSetup(gtk_page_setup_new());
-
     gtk_page_setup_set_orientation(pageSetup,
         printData.GetOrientation() == wxLANDSCAPE
             ? GTK_PAGE_ORIENTATION_LANDSCAPE
             : GTK_PAGE_ORIENTATION_PORTRAIT);
-
     GtkPaperSize* paperSize = wxWebViewGetGtkPaperSize(printData.GetPaperId());
     gtk_page_setup_set_paper_size_and_default_margins(pageSetup, paperSize);
     gtk_paper_size_free(paperSize);
-
     webkit_print_operation_set_page_setup(printop, pageSetup);
-
-    // Use GtkPrintSettings for copies, collation, duplex, color
-    wxGtkObject<GtkPrintSettings> settings(gtk_print_settings_new());
 
     int copies = printData.GetNoCopies();
     if (copies > 0)
         gtk_print_settings_set_n_copies(settings, copies);
-
     gtk_print_settings_set_collate(settings, printData.GetCollate());
+}
+
+void wxWebViewWebKit::Print(const wxPrintData& printData, int WXUNUSED(flags))
+{
+    wxGtkObject<WebKitPrintOperation> printop(webkit_print_operation_new(m_web_view));
+
+    wxGtkObject<GtkPrintSettings> settings(gtk_print_settings_new());
+
+    wxApplyPrintData(printop, settings, printData);
 
     switch (printData.GetDuplex())
     {
@@ -1522,6 +1527,97 @@ void wxWebViewWebKit::Print(const wxPrintData& printData, int WXUNUSED(flags))
     webkit_print_operation_set_print_settings(printop, settings);
 
     webkit_print_operation_run_dialog(printop, nullptr);
+}
+#endif // wxUSE_PRINTING_ARCHITECTURE
+
+struct wxWebViewGtkPDFData
+{
+    wxWebViewGtkPDFData(wxWebViewWebKit* webView_,
+                        const wxString& filePath_,
+                        WebKitPrintOperation* printop_)
+        : webView(webView_), filePath(filePath_), printop(printop_) {}
+    ~wxWebViewGtkPDFData() { g_object_unref(printop); }
+
+    wxWeakRef<wxWebViewWebKit> webView;
+    wxString filePath;
+    WebKitPrintOperation* printop;
+};
+
+static void wxDoHandlePDFResult(gpointer user_data, int success)
+{
+    wxWebViewGtkPDFData* data = static_cast<wxWebViewGtkPDFData*>(user_data);
+    if (data->webView)
+    {
+        wxWebViewEvent event(wxEVT_WEBVIEW_PDF_SAVED, data->webView->GetId(),
+                             data->filePath, wxString());
+        event.SetInt(success);
+        event.SetEventObject(data->webView);
+        data->webView->HandleWindowEvent(event);
+    }
+    delete data;
+}
+
+extern "C"
+{
+
+static void
+wxgtk_webview_webkit_pdf_finished(WebKitPrintOperation*,
+                                  gpointer user_data)
+{
+    wxDoHandlePDFResult(user_data, 1);
+}
+
+static void
+wxgtk_webview_webkit_pdf_failed(WebKitPrintOperation*,
+                                GError*,
+                                gpointer user_data)
+{
+    wxDoHandlePDFResult(user_data, 0);
+}
+
+} // extern "C"
+
+static bool wxDoStartPDFPrint(wxWebViewWebKit* webView,
+                               const wxString& filePath,
+                               const void* printData = nullptr)
+{
+    wxGtkString uri(g_filename_to_uri(filePath.utf8_str(), nullptr, nullptr));
+    if (!uri)
+        return false;
+
+    WebKitPrintOperation* printop = webkit_print_operation_new(
+        static_cast<WebKitWebView*>(webView->GetNativeBackend()));
+
+    wxGtkObject<GtkPrintSettings> settings(gtk_print_settings_new());
+    // Do NOT translate this; this is the name of the "printer" that GTK looks up
+    gtk_print_settings_set_printer(settings, "Print to File");
+    gtk_print_settings_set(settings, GTK_PRINT_SETTINGS_OUTPUT_FILE_FORMAT, "pdf");
+    gtk_print_settings_set(settings, GTK_PRINT_SETTINGS_OUTPUT_URI, uri);
+
+#if wxUSE_PRINTING_ARCHITECTURE
+    if (printData)
+        wxApplyPrintData(printop, settings, *static_cast<const wxPrintData*>(printData));
+#endif
+
+    webkit_print_operation_set_print_settings(printop, settings);
+
+    wxWebViewGtkPDFData* data = new wxWebViewGtkPDFData{webView, filePath, printop};
+    g_signal_connect(printop, "finished", G_CALLBACK(wxgtk_webview_webkit_pdf_finished), data);
+    g_signal_connect(printop, "failed", G_CALLBACK(wxgtk_webview_webkit_pdf_failed), data);
+
+    webkit_print_operation_print(printop);
+    return true;
+}
+
+bool wxWebViewWebKit::PrintToPDF(const wxString& filePath)
+{
+    return wxDoStartPDFPrint(this, filePath);
+}
+
+#if wxUSE_PRINTING_ARCHITECTURE
+bool wxWebViewWebKit::PrintToPDF(const wxString& filePath, const wxPrintData& printData)
+{
+    return wxDoStartPDFPrint(this, filePath, &printData);
 }
 #endif // wxUSE_PRINTING_ARCHITECTURE
 

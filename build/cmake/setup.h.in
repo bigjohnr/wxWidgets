@@ -626,9 +626,16 @@
 
     This is needed by any Wayland-specific code in wxGTK implementation.
 
-    Recommended setting: 1, only set to 0 if wayland-client is not available.
+    Define if wayland-client is available.
  */
-#cmakedefine01 wxHAVE_WAYLAND_CLIENT
+#cmakedefine wxHAVE_WAYLAND_CLIENT 1
+
+/*
+    Use Wayland session-management protocol.
+
+    This is defined if GTK is new enough to support it.
+ */
+#cmakedefine wxHAVE_WAYLAND_SESSION_MANAGEMENT 1
 
 /*
    Use XTest extension to implement wxUIActionSimulator?
@@ -684,8 +691,6 @@
 
 #cmakedefine01 wxUSE_TASKBARBUTTON
 
-#cmakedefine01 wxUSE_UXTHEME
-
 #cmakedefine01 wxUSE_INKEDIT
 
 #cmakedefine01 wxUSE_INICONF
@@ -736,6 +741,11 @@
  * Use SDL for audio (Unix)
  */
 #cmakedefine01 wxUSE_LIBSDL
+
+/*
+ * Use SDL 3.x (rather than SDL 2.x or 1.x) for the SDL audio backend
+ */
+#cmakedefine01 wxUSE_LIBSDL3
 
 /*
  * Compile sound backends as plugins

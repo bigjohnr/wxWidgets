@@ -84,8 +84,8 @@ wxCFLAGS_C99 = @wxCFLAGS_C99@
 DESTDIR = 
 WX_RELEASE = 3.3
 WX_RELEASE_NODOT = 33
-WX_VERSION = $(WX_RELEASE).3
-WX_VERSION_NODOT = $(WX_RELEASE_NODOT)3
+WX_VERSION = $(WX_RELEASE).4
+WX_VERSION_NODOT = $(WX_RELEASE_NODOT)4
 LIBDIRNAME = $(wx_top_builddir)/lib
 WXREGEX_CFLAGS = -I$(wx_top_builddir)/3rdparty/pcre/src -D__WX__ \
 	-DHAVE_CONFIG_H -DPCRE2_CODE_UNIT_WIDTH=$(wxPCRE2_CODE_UNIT_WIDTH) \
@@ -3702,6 +3702,7 @@ COND_USE_GUI_1_ALL_GUI_HEADERS =  \
 	wx/statbox.h \
 	wx/stattext.h \
 	wx/statusbr.h \
+	wx/svggc.h \
 	wx/testing.h \
 	wx/textcompleter.h \
 	wx/textctrl.h \
@@ -4478,6 +4479,7 @@ COND_USE_GUI_1_WXUNIV_0___CORE_SRC_OBJECTS =  \
 	monodll_statlinecmn.o \
 	monodll_stattextcmn.o \
 	monodll_stockitem.o \
+	monodll_svggc.o \
 	monodll_tbarbase.o \
 	monodll_textcmn.o \
 	monodll_textentrycmn.o \
@@ -4746,6 +4748,7 @@ COND_USE_GUI_1_WXUNIV_1___CORE_SRC_OBJECTS =  \
 	monodll_statlinecmn.o \
 	monodll_stattextcmn.o \
 	monodll_stockitem.o \
+	monodll_svggc.o \
 	monodll_tbarbase.o \
 	monodll_textcmn.o \
 	monodll_textentrycmn.o \
@@ -5064,7 +5067,8 @@ COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS =  \
 	monodll_darkmode.o \
 	monodll_msw_appprogress.o \
 	monodll_taskbarbutton.o \
-	monodll_msw_power.o
+	monodll_msw_power.o \
+	monodll_taskdlg.o
 @COND_TOOLKIT_MSW@__LOWLEVEL_SRC_OBJECTS = $(COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS)
 @COND_TOOLKIT_OSX_COCOA@__LOWLEVEL_SRC_OBJECTS = \
 @COND_TOOLKIT_OSX_COCOA@	$(__OSX_LOWLEVEL_SRC_OBJECTS)
@@ -5808,7 +5812,8 @@ COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_1 =  \
 	monodll_darkmode.o \
 	monodll_msw_appprogress.o \
 	monodll_taskbarbutton.o \
-	monodll_msw_power.o
+	monodll_msw_power.o \
+	monodll_taskdlg.o
 @COND_TOOLKIT_MSW@__LOWLEVEL_SRC_OBJECTS_1 = $(COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_1)
 @COND_TOOLKIT_OSX_COCOA@__LOWLEVEL_SRC_OBJECTS_1 = \
 @COND_TOOLKIT_OSX_COCOA@	$(__OSX_LOWLEVEL_SRC_OBJECTS)
@@ -6264,6 +6269,7 @@ COND_USE_GUI_1_WXUNIV_0___CORE_SRC_OBJECTS_1 =  \
 	monolib_statlinecmn.o \
 	monolib_stattextcmn.o \
 	monolib_stockitem.o \
+	monolib_svggc.o \
 	monolib_tbarbase.o \
 	monolib_textcmn.o \
 	monolib_textentrycmn.o \
@@ -6532,6 +6538,7 @@ COND_USE_GUI_1_WXUNIV_1___CORE_SRC_OBJECTS_1 =  \
 	monolib_statlinecmn.o \
 	monolib_stattextcmn.o \
 	monolib_stockitem.o \
+	monolib_svggc.o \
 	monolib_tbarbase.o \
 	monolib_textcmn.o \
 	monolib_textentrycmn.o \
@@ -6850,7 +6857,8 @@ COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_2 =  \
 	monolib_darkmode.o \
 	monolib_msw_appprogress.o \
 	monolib_taskbarbutton.o \
-	monolib_msw_power.o
+	monolib_msw_power.o \
+	monolib_taskdlg.o
 @COND_TOOLKIT_MSW@__LOWLEVEL_SRC_OBJECTS_2 = $(COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_2)
 @COND_TOOLKIT_OSX_COCOA@__LOWLEVEL_SRC_OBJECTS_2 = \
 @COND_TOOLKIT_OSX_COCOA@	$(__OSX_LOWLEVEL_SRC_OBJECTS_17)
@@ -7594,7 +7602,8 @@ COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_3 =  \
 	monolib_darkmode.o \
 	monolib_msw_appprogress.o \
 	monolib_taskbarbutton.o \
-	monolib_msw_power.o
+	monolib_msw_power.o \
+	monolib_taskdlg.o
 @COND_TOOLKIT_MSW@__LOWLEVEL_SRC_OBJECTS_3 = $(COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_3)
 @COND_TOOLKIT_OSX_COCOA@__LOWLEVEL_SRC_OBJECTS_3 = \
 @COND_TOOLKIT_OSX_COCOA@	$(__OSX_LOWLEVEL_SRC_OBJECTS_17)
@@ -8196,6 +8205,7 @@ COND_USE_GUI_1_WXUNIV_0___CORE_SRC_OBJECTS_2 =  \
 	coredll_statlinecmn.o \
 	coredll_stattextcmn.o \
 	coredll_stockitem.o \
+	coredll_svggc.o \
 	coredll_tbarbase.o \
 	coredll_textcmn.o \
 	coredll_textentrycmn.o \
@@ -8464,6 +8474,7 @@ COND_USE_GUI_1_WXUNIV_1___CORE_SRC_OBJECTS_2 =  \
 	coredll_statlinecmn.o \
 	coredll_stattextcmn.o \
 	coredll_stockitem.o \
+	coredll_svggc.o \
 	coredll_tbarbase.o \
 	coredll_textcmn.o \
 	coredll_textentrycmn.o \
@@ -8782,7 +8793,8 @@ COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_4 =  \
 	coredll_darkmode.o \
 	coredll_msw_appprogress.o \
 	coredll_taskbarbutton.o \
-	coredll_msw_power.o
+	coredll_msw_power.o \
+	coredll_taskdlg.o
 @COND_TOOLKIT_MSW@__LOWLEVEL_SRC_OBJECTS_4 = $(COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_4)
 @COND_TOOLKIT_OSX_COCOA@__LOWLEVEL_SRC_OBJECTS_4 = \
 @COND_TOOLKIT_OSX_COCOA@	$(__OSX_LOWLEVEL_SRC_OBJECTS_1_1)
@@ -9526,7 +9538,8 @@ COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_5 =  \
 	coredll_darkmode.o \
 	coredll_msw_appprogress.o \
 	coredll_taskbarbutton.o \
-	coredll_msw_power.o
+	coredll_msw_power.o \
+	coredll_taskdlg.o
 @COND_TOOLKIT_MSW@__LOWLEVEL_SRC_OBJECTS_5 = $(COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_5)
 @COND_TOOLKIT_OSX_COCOA@__LOWLEVEL_SRC_OBJECTS_5 = \
 @COND_TOOLKIT_OSX_COCOA@	$(__OSX_LOWLEVEL_SRC_OBJECTS_1_1)
@@ -9707,6 +9720,7 @@ COND_USE_GUI_1_WXUNIV_0___CORE_SRC_OBJECTS_3 =  \
 	corelib_statlinecmn.o \
 	corelib_stattextcmn.o \
 	corelib_stockitem.o \
+	corelib_svggc.o \
 	corelib_tbarbase.o \
 	corelib_textcmn.o \
 	corelib_textentrycmn.o \
@@ -9975,6 +9989,7 @@ COND_USE_GUI_1_WXUNIV_1___CORE_SRC_OBJECTS_3 =  \
 	corelib_statlinecmn.o \
 	corelib_stattextcmn.o \
 	corelib_stockitem.o \
+	corelib_svggc.o \
 	corelib_tbarbase.o \
 	corelib_textcmn.o \
 	corelib_textentrycmn.o \
@@ -10293,7 +10308,8 @@ COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_6 =  \
 	corelib_darkmode.o \
 	corelib_msw_appprogress.o \
 	corelib_taskbarbutton.o \
-	corelib_msw_power.o
+	corelib_msw_power.o \
+	corelib_taskdlg.o
 @COND_TOOLKIT_MSW@__LOWLEVEL_SRC_OBJECTS_6 = $(COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_6)
 @COND_TOOLKIT_OSX_COCOA@__LOWLEVEL_SRC_OBJECTS_6 = \
 @COND_TOOLKIT_OSX_COCOA@	$(__OSX_LOWLEVEL_SRC_OBJECTS_1_4)
@@ -11037,7 +11053,8 @@ COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_7 =  \
 	corelib_darkmode.o \
 	corelib_msw_appprogress.o \
 	corelib_taskbarbutton.o \
-	corelib_msw_power.o
+	corelib_msw_power.o \
+	corelib_taskdlg.o
 @COND_TOOLKIT_MSW@__LOWLEVEL_SRC_OBJECTS_7 = $(COND_TOOLKIT_MSW___LOWLEVEL_SRC_OBJECTS_7)
 @COND_TOOLKIT_OSX_COCOA@__LOWLEVEL_SRC_OBJECTS_7 = \
 @COND_TOOLKIT_OSX_COCOA@	$(__OSX_LOWLEVEL_SRC_OBJECTS_1_4)
@@ -12840,17 +12857,17 @@ COND_MONOLITHIC_0_SHARED_1_USE_GUI_1_USE_HTML_1___htmldll_library_link_LIBR_0 \
 @COND_USE_EXCEPTIONS_0@__EXCEPTIONS_DEFINE_p_65 = --define wxNO_EXCEPTIONS
 @COND_USE_RTTI_0@__RTTI_DEFINE_p_65 = --define wxNO_RTTI
 @COND_USE_THREADS_0@__THREAD_DEFINE_p_65 = --define wxNO_THREADS
-@COND_PLATFORM_MACOSX_0_USE_SOVERSION_1@dll___targetsuf2 = .$(SO_SUFFIX).3
-@COND_PLATFORM_MACOSX_1_USE_SOVERSION_1@dll___targetsuf2 = .3.$(SO_SUFFIX)
+@COND_PLATFORM_MACOSX_0_USE_SOVERSION_1@dll___targetsuf2 = .$(SO_SUFFIX).4
+@COND_PLATFORM_MACOSX_1_USE_SOVERSION_1@dll___targetsuf2 = .4.$(SO_SUFFIX)
 @COND_USE_SOVERSION_0@dll___targetsuf2 = .$(SO_SUFFIX)
 @COND_PLATFORM_MACOSX_0_USE_SOVERCYGWIN_0_USE_SOVERSION_1@dll___targetsuf3 \
 @COND_PLATFORM_MACOSX_0_USE_SOVERCYGWIN_0_USE_SOVERSION_1@	= \
-@COND_PLATFORM_MACOSX_0_USE_SOVERCYGWIN_0_USE_SOVERSION_1@	.$(SO_SUFFIX).3.0.0
+@COND_PLATFORM_MACOSX_0_USE_SOVERCYGWIN_0_USE_SOVERSION_1@	.$(SO_SUFFIX).4.0.0
 @COND_PLATFORM_MACOSX_1_USE_SOVERSION_1@dll___targetsuf3 \
-@COND_PLATFORM_MACOSX_1_USE_SOVERSION_1@	= .3.0.0.$(SO_SUFFIX)
-@COND_USE_SOVERCYGWIN_1_USE_SOVERSION_1@dll___targetsuf3 = -3.$(SO_SUFFIX)
+@COND_PLATFORM_MACOSX_1_USE_SOVERSION_1@	= .4.0.0.$(SO_SUFFIX)
+@COND_USE_SOVERCYGWIN_1_USE_SOVERSION_1@dll___targetsuf3 = -4.$(SO_SUFFIX)
 @COND_USE_SOVERSION_0@dll___targetsuf3 = .$(SO_SUFFIX)
-@COND_USE_SOVERSION_1_USE_SOVERSOLARIS_1@dll___targetsuf3 = .$(SO_SUFFIX).3
+@COND_USE_SOVERSION_1_USE_SOVERSOLARIS_1@dll___targetsuf3 = .$(SO_SUFFIX).4
 @COND_TOOLKIT_MSW@__RCDEFDIR_p = --include-dir \
 @COND_TOOLKIT_MSW@	$(LIBDIRNAME)/wx/include/$(TOOLCHAIN_FULLNAME)
 @COND_USE_GUI_1_wxUSE_LIBTIFF_builtin@__LIB_TIFF_p \
@@ -18073,6 +18090,9 @@ monodll_sound_sdl.o: $(srcdir)/src/unix/sound_sdl.cpp $(MONODLL_ODEP)
 @COND_TOOLKIT_MSW_USE_GUI_1@monodll_msw_power.o: $(srcdir)/src/msw/power.cpp $(MONODLL_ODEP)
 @COND_TOOLKIT_MSW_USE_GUI_1@	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/msw/power.cpp
 
+@COND_TOOLKIT_MSW_USE_GUI_1@monodll_taskdlg.o: $(srcdir)/src/msw/taskdlg.cpp $(MONODLL_ODEP)
+@COND_TOOLKIT_MSW_USE_GUI_1@	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/msw/taskdlg.cpp
+
 @COND_PLATFORM_MACOSX_1_TOOLKIT_OSX_COCOA_USE_GUI_1@monodll_artmac.o: $(srcdir)/src/osx/artmac.cpp $(MONODLL_ODEP)
 @COND_PLATFORM_MACOSX_1_TOOLKIT_OSX_COCOA_USE_GUI_1@	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/osx/artmac.cpp
 
@@ -19773,6 +19793,9 @@ monodll_sound_sdl.o: $(srcdir)/src/unix/sound_sdl.cpp $(MONODLL_ODEP)
 
 @COND_USE_GUI_1@monodll_stockitem.o: $(srcdir)/src/common/stockitem.cpp $(MONODLL_ODEP)
 @COND_USE_GUI_1@	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/common/stockitem.cpp
+
+@COND_USE_GUI_1@monodll_svggc.o: $(srcdir)/src/common/svggc.cpp $(MONODLL_ODEP)
+@COND_USE_GUI_1@	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/common/svggc.cpp
 
 @COND_USE_GUI_1@monodll_tbarbase.o: $(srcdir)/src/common/tbarbase.cpp $(MONODLL_ODEP)
 @COND_USE_GUI_1@	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/common/tbarbase.cpp
@@ -22864,6 +22887,9 @@ monolib_sound_sdl.o: $(srcdir)/src/unix/sound_sdl.cpp $(MONOLIB_ODEP)
 @COND_TOOLKIT_MSW_USE_GUI_1@monolib_msw_power.o: $(srcdir)/src/msw/power.cpp $(MONOLIB_ODEP)
 @COND_TOOLKIT_MSW_USE_GUI_1@	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/msw/power.cpp
 
+@COND_TOOLKIT_MSW_USE_GUI_1@monolib_taskdlg.o: $(srcdir)/src/msw/taskdlg.cpp $(MONOLIB_ODEP)
+@COND_TOOLKIT_MSW_USE_GUI_1@	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/msw/taskdlg.cpp
+
 @COND_PLATFORM_MACOSX_1_TOOLKIT_OSX_COCOA_USE_GUI_1@monolib_artmac.o: $(srcdir)/src/osx/artmac.cpp $(MONOLIB_ODEP)
 @COND_PLATFORM_MACOSX_1_TOOLKIT_OSX_COCOA_USE_GUI_1@	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/osx/artmac.cpp
 
@@ -24564,6 +24590,9 @@ monolib_sound_sdl.o: $(srcdir)/src/unix/sound_sdl.cpp $(MONOLIB_ODEP)
 
 @COND_USE_GUI_1@monolib_stockitem.o: $(srcdir)/src/common/stockitem.cpp $(MONOLIB_ODEP)
 @COND_USE_GUI_1@	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/common/stockitem.cpp
+
+@COND_USE_GUI_1@monolib_svggc.o: $(srcdir)/src/common/svggc.cpp $(MONOLIB_ODEP)
+@COND_USE_GUI_1@	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/common/svggc.cpp
 
 @COND_USE_GUI_1@monolib_tbarbase.o: $(srcdir)/src/common/tbarbase.cpp $(MONOLIB_ODEP)
 @COND_USE_GUI_1@	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/common/tbarbase.cpp
@@ -27718,6 +27747,9 @@ coredll_sound_sdl.o: $(srcdir)/src/unix/sound_sdl.cpp $(COREDLL_ODEP)
 @COND_TOOLKIT_MSW_USE_GUI_1@coredll_msw_power.o: $(srcdir)/src/msw/power.cpp $(COREDLL_ODEP)
 @COND_TOOLKIT_MSW_USE_GUI_1@	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/msw/power.cpp
 
+@COND_TOOLKIT_MSW_USE_GUI_1@coredll_taskdlg.o: $(srcdir)/src/msw/taskdlg.cpp $(COREDLL_ODEP)
+@COND_TOOLKIT_MSW_USE_GUI_1@	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/msw/taskdlg.cpp
+
 @COND_PLATFORM_MACOSX_1_TOOLKIT_OSX_COCOA_USE_GUI_1@coredll_artmac.o: $(srcdir)/src/osx/artmac.cpp $(COREDLL_ODEP)
 @COND_PLATFORM_MACOSX_1_TOOLKIT_OSX_COCOA_USE_GUI_1@	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/osx/artmac.cpp
 
@@ -29418,6 +29450,9 @@ coredll_sound_sdl.o: $(srcdir)/src/unix/sound_sdl.cpp $(COREDLL_ODEP)
 
 @COND_USE_GUI_1@coredll_stockitem.o: $(srcdir)/src/common/stockitem.cpp $(COREDLL_ODEP)
 @COND_USE_GUI_1@	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/common/stockitem.cpp
+
+@COND_USE_GUI_1@coredll_svggc.o: $(srcdir)/src/common/svggc.cpp $(COREDLL_ODEP)
+@COND_USE_GUI_1@	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/common/svggc.cpp
 
 @COND_USE_GUI_1@coredll_tbarbase.o: $(srcdir)/src/common/tbarbase.cpp $(COREDLL_ODEP)
 @COND_USE_GUI_1@	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/common/tbarbase.cpp
@@ -31471,6 +31506,9 @@ corelib_sound_sdl.o: $(srcdir)/src/unix/sound_sdl.cpp $(CORELIB_ODEP)
 @COND_TOOLKIT_MSW_USE_GUI_1@corelib_msw_power.o: $(srcdir)/src/msw/power.cpp $(CORELIB_ODEP)
 @COND_TOOLKIT_MSW_USE_GUI_1@	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/msw/power.cpp
 
+@COND_TOOLKIT_MSW_USE_GUI_1@corelib_taskdlg.o: $(srcdir)/src/msw/taskdlg.cpp $(CORELIB_ODEP)
+@COND_TOOLKIT_MSW_USE_GUI_1@	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/msw/taskdlg.cpp
+
 @COND_PLATFORM_MACOSX_1_TOOLKIT_OSX_COCOA_USE_GUI_1@corelib_artmac.o: $(srcdir)/src/osx/artmac.cpp $(CORELIB_ODEP)
 @COND_PLATFORM_MACOSX_1_TOOLKIT_OSX_COCOA_USE_GUI_1@	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/osx/artmac.cpp
 
@@ -33171,6 +33209,9 @@ corelib_sound_sdl.o: $(srcdir)/src/unix/sound_sdl.cpp $(CORELIB_ODEP)
 
 @COND_USE_GUI_1@corelib_stockitem.o: $(srcdir)/src/common/stockitem.cpp $(CORELIB_ODEP)
 @COND_USE_GUI_1@	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/common/stockitem.cpp
+
+@COND_USE_GUI_1@corelib_svggc.o: $(srcdir)/src/common/svggc.cpp $(CORELIB_ODEP)
+@COND_USE_GUI_1@	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/common/svggc.cpp
 
 @COND_USE_GUI_1@corelib_tbarbase.o: $(srcdir)/src/common/tbarbase.cpp $(CORELIB_ODEP)
 @COND_USE_GUI_1@	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/common/tbarbase.cpp

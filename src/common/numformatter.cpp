@@ -354,6 +354,7 @@ wxString wxNumberFormatter::RemoveCurrencySymbolOrCode(wxString s, int style)
             case wxCurrencySymbolPosition::PrefixWithSep:
                 currencyStr += wxString(" ");
                 // Fall through to case without separator
+                wxFALLTHROUGH;
             case wxCurrencySymbolPosition::PrefixNoSep:
                 if (s.StartsWith(currencyStr, &valueStr))
                     s = valueStr;
@@ -361,6 +362,7 @@ wxString wxNumberFormatter::RemoveCurrencySymbolOrCode(wxString s, int style)
             case wxCurrencySymbolPosition::SuffixWithSep:
                 currencyStr = wxString(" ") + currencyStr;
                 // Fall through to case without separator
+                wxFALLTHROUGH;
             case wxCurrencySymbolPosition::SuffixNoSep:
                 if (s.EndsWith(currencyStr, &valueStr))
                     s = valueStr;
@@ -417,12 +419,12 @@ bool wxNumberFormatter::FromString(wxString s, wxULongLong_t *val)
     // the same thing, but here we really want to accept the "true" unsigned
     // numbers only, so check for leading minus, possibly preceded by some
     // whitespace.
-    for ( wxString::const_iterator it = s.begin(); it != s.end(); ++it )
+    for ( const auto& c : s )
     {
-        if ( *it == '-' )
+        if ( c == '-' )
             return false;
 
-        if ( *it != ' ' && *it != '\t' )
+        if ( c != ' ' && c != '\t' )
             break;
     }
 

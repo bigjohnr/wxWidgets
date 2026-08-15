@@ -66,14 +66,6 @@
     extern wxMenu *wxCurrentPopupMenu;
 #endif // wxUSE_MENUS || wxUSE_MENUS_NATIVE
 
-// ----------------------------------------------------------------------------
-// event tables
-// ----------------------------------------------------------------------------
-
-wxBEGIN_EVENT_TABLE(wxFrame, wxFrameBase)
-    EVT_SYS_COLOUR_CHANGED(wxFrame::OnSysColourChanged)
-wxEND_EVENT_TABLE()
-
 // ============================================================================
 // implementation
 // ============================================================================
@@ -122,8 +114,6 @@ bool wxFrame::Create(wxWindow *parent,
 {
     if ( !wxTopLevelWindow::Create(parent, id, title, pos, size, style, name) )
         return false;
-
-    SetOwnBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_APPWORKSPACE));
 
 #if wxUSE_TASKBARBUTTON
     static bool s_taskbarButtonCreatedMsgRegistered = false;
@@ -472,25 +462,8 @@ wxTaskBarButton* wxFrame::MSWGetTaskBarButton()
 }
 #endif // wxUSE_TASKBARBUTTON
 
-// Responds to colour changes, and passes event on to children.
-void wxFrame::OnSysColourChanged(wxSysColourChangedEvent& event)
+void wxFrame::SendSysColourChangedEvents()
 {
-    // Don't override the colour explicitly set by the user, if any.
-    if ( !UseBgCol() )
-    {
-        SetOwnBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_APPWORKSPACE));
-        Refresh();
-    }
-
-#if wxUSE_STATUSBAR
-    if ( m_frameStatusBar )
-    {
-        wxSysColourChangedEvent event2;
-        event2.SetEventObject( m_frameStatusBar );
-        m_frameStatusBar->HandleWindowEvent(event2);
-    }
-#endif // wxUSE_STATUSBAR
-
 #if wxUSE_MENUS && wxUSE_OWNER_DRAWN && !defined(__WXUNIVERSAL__)
     if ( wxMenuBar* const menuBar = GetMenuBar() )
     {
@@ -498,8 +471,7 @@ void wxFrame::OnSysColourChanged(wxSysColourChangedEvent& event)
     }
 #endif // wxUSE_MENUS && wxUSE_OWNER_DRAWN && !defined(__WXUNIVERSAL__)
 
-    // Propagate the event to the non-top-level children
-    wxWindow::OnSysColourChanged(event);
+    BaseType::SendSysColourChangedEvents();
 }
 
 // Pass true to show full screen, false to restore.
@@ -729,6 +701,13 @@ void wxFrame::IconizeChildFrames(bool bIconize)
     }
 }
 
+wxVisualAttributes wxFrame::GetDefaultAttributes() const
+{
+    wxVisualAttributes attrs = GetClassDefaultAttributes(GetWindowVariant());
+    attrs.colBg = wxSystemSettings::GetColour(wxSYS_COLOUR_APPWORKSPACE);
+    return attrs;
+}
+
 WXHICON wxFrame::GetDefaultIcon() const
 {
     // we don't have any standard icons (any more)
@@ -913,11 +892,13 @@ WXLRESULT wxFrame::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lPara
     WXLRESULT rc = 0;
     bool processed = false;
 
+#if wxUSE_MENUBAR
     if ( GetMenuBar() &&
           HandleMenuMessage(&rc, this, message, wParam, lParam) )
     {
         return rc;
     }
+#endif // wxUSE_MENUBAR
 
     switch ( message )
     {
@@ -949,6 +930,7 @@ WXLRESULT wxFrame::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lPara
             }
             break;
 
+#if wxUSE_MENUBAR
         case WM_INITMENUPOPUP:
         case WM_UNINITMENUPOPUP:
             // We get these messages from the menu bar even if the menu is
@@ -964,6 +946,7 @@ WXLRESULT wxFrame::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lPara
                 }
             }
             break;
+#endif // wxUSE_MENUBAR
 
         case WM_QUERYDRAGICON:
             {

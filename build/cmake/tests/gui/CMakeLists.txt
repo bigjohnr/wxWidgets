@@ -24,6 +24,7 @@ set(TEST_GUI_SRC
     graphics/boundingbox.cpp
     graphics/clipper.cpp
     graphics/clippingbox.cpp
+    graphics/svgattributes.cpp
     graphics/coords.cpp
     graphics/graphbitmap.cpp
     graphics/graphmatrix.cpp
@@ -97,6 +98,7 @@ set(TEST_GUI_SRC
     image/image.cpp
     image/imagwebp.cpp
     image/rawbmp.cpp
+    html/helpdata.cpp
     html/htmlparser.cpp
     html/htmlwindow.cpp
     html/htmprint.cpp

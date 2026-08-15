@@ -5,6 +5,7 @@
 // Modified by: Robin Dunn, Vadim Zeitlin, Santiago Palacios
 // Created:     1/08/1999
 // Copyright:   (c) Michael Bedward (mbedward@ozemail.com.au)
+//              (c) 2026 wxWidgets development team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -351,15 +352,23 @@ void wxGridHeaderLabelsRenderer::DrawLabel(const wxGrid& grid,
     wxColour colText;
     if ( !grid.IsEnabled() )
     {
-        colText = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNHIGHLIGHT);
-        dc.SetTextForeground(colText);
+        // Don't use 3D shadows in dark mode, also just as wxGenericStaticText.
+        if ( wxSystemSettings::GetAppearance().IsDark() )
+        {
+            colText = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+        }
+        else
+        {
+            colText = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNHIGHLIGHT);
+            dc.SetTextForeground(colText);
 
-        wxRect rectShadow = rect;
-        rectShadow.Offset(1, 1);
-        grid.DrawTextRectangle(dc, value, rectShadow,
-                               horizAlign, vertAlign, textOrientation);
+            wxRect rectShadow = rect;
+            rectShadow.Offset(1, 1);
+            grid.DrawTextRectangle(dc, value, rectShadow,
+                horizAlign, vertAlign, textOrientation);
 
-        colText = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW);
+            colText = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW);
+        }
     }
     else
     {
@@ -960,11 +969,9 @@ void KeyToCoords(wxGridCoordsToAttrMap::key_type key, int *pRow, int *pCol)
 
 wxGridCellAttrData::~wxGridCellAttrData()
 {
-    for ( wxGridCoordsToAttrMap::iterator it = m_attrs.begin();
-          it != m_attrs.end();
-          ++it )
+    for ( auto& entry : m_attrs )
     {
-        it->second->DecRef();
+        entry.second->DecRef();
     }
 
     m_attrs.clear();
@@ -1030,12 +1037,10 @@ void UpdateCellAttrRowsOrCols(wxGridCoordsToAttrMap& attrs, int editPos,
     // without now deleted attributes.
     wxGridCoordsToAttrMap newAttrs;
 
-    for ( wxGridCoordsToAttrMap::iterator it = attrs.begin();
-          it != attrs.end();
-          ++it )
+    for ( auto& entry : attrs )
     {
-        const wxGridCoordsToAttrMap::key_type oldCoords = it->first;
-        wxGridCellAttr* cellAttr = it->second;
+        const wxGridCoordsToAttrMap::key_type oldCoords = entry.first;
+        wxGridCellAttr* cellAttr = entry.second;
 
         int cellRows, cellCols;
         cellAttr->GetSize(&cellRows, &cellCols);
@@ -2865,6 +2870,7 @@ wxBEGIN_EVENT_TABLE( wxGrid, wxScrolledCanvas )
     EVT_DPI_CHANGED( wxGrid::OnDPIChanged )
     EVT_KEY_DOWN( wxGrid::OnKeyDown )
     EVT_CHAR ( wxGrid::OnChar )
+    EVT_SYS_COLOUR_CHANGED(wxGrid::OnSysColourChanged)
 wxEND_EVENT_TABLE()
 
 bool wxGrid::Create(wxWindow *parent, wxWindowID id,
@@ -2891,6 +2897,7 @@ wxGrid::~wxGrid()
     // otherwise we crash later when the editor tries to do something with the
     // half destroyed grid
     HideCellEditControl();
+    m_activeCellEditor.reset(nullptr);
 
     // Must do this or ~wxScrollHelper will pop the wrong event handler
     SetTargetWindow(this);
@@ -2928,10 +2935,6 @@ wxGrid::~wxGrid()
 // ----- internal init and update functions
 //
 
-// NOTE: If using the default visual attributes works everywhere then this can
-// be removed as well as the #else cases below.
-#define _USE_VISATTR 0
-
 void wxGrid::Create()
 {
     // create the type registry
@@ -2950,20 +2953,6 @@ void wxGrid::Create()
     m_defaultCellAttr->SetEditor(new wxGridCellTextEditor);
     m_defaultCellAttr->SetFitMode(wxGridFitMode::Overflow());
 
-#if _USE_VISATTR
-    wxVisualAttributes gva = wxListBox::GetClassDefaultAttributes();
-    wxVisualAttributes lva = wxPanel::GetClassDefaultAttributes();
-
-    m_defaultCellAttr->SetTextColour(gva.colFg);
-    m_defaultCellAttr->SetBackgroundColour(gva.colBg);
-
-#else
-    m_defaultCellAttr->SetTextColour(
-        wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-    m_defaultCellAttr->SetBackgroundColour(
-        wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-#endif
-
     m_numRows = 0;
     m_numCols = 0;
     m_numFrozenRows = 0;
@@ -2978,30 +2967,7 @@ void wxGrid::Create()
 
     SetTargetWindow( m_gridWin );
 
-#if _USE_VISATTR
-    wxColour gfg = gva.colFg;
-    wxColour gbg = gva.colBg;
-    wxColour lfg = lva.colFg;
-    wxColour lbg = lva.colBg;
-#else
-    wxColour gfg = wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOWTEXT );
-    wxColour gbg = wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOW );
-    wxColour lfg = wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOWTEXT );
-    wxColour lbg = wxSystemSettings::GetColour( wxSYS_COLOUR_BTNFACE );
-#endif
-
-    m_cornerLabelWin->SetOwnForegroundColour(lfg);
-    m_cornerLabelWin->SetOwnBackgroundColour(lbg);
-    m_rowLabelWin->SetOwnForegroundColour(lfg);
-    m_rowLabelWin->SetOwnBackgroundColour(lbg);
-    m_colLabelWin->SetOwnForegroundColour(lfg);
-    m_colLabelWin->SetOwnBackgroundColour(lbg);
-
-    m_gridWin->SetOwnForegroundColour(gfg);
-    m_gridWin->SetOwnBackgroundColour(gbg);
-
-    m_labelBackgroundColour = m_rowLabelWin->GetBackgroundColour();
-    m_labelTextColour = m_rowLabelWin->GetForegroundColour();
+    UpdateColours();
 
     InitPixelFields();
 
@@ -3219,14 +3185,11 @@ void wxGrid::Init()
     m_minAcceptableColWidth  =
     m_minAcceptableRowHeight = 0;
 
-    m_gridLineColour = wxSystemSettings::GetColour(wxSYS_COLOUR_GRIDLINES);
     m_gridLinesEnabled = true;
     m_gridLinesClipHorz =
     m_gridLinesClipVert = true;
-    m_cellHighlightColour = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
     m_cellHighlightPenWidth = 2;
     m_cellHighlightROPenWidth = 1;
-    m_gridFrozenBorderColour = wxSystemSettings::SelectLightDark(*wxBLACK, *wxWHITE);
     m_gridFrozenBorderPenWidth = 2;
 
     m_canDragRowMove = false;
@@ -3265,9 +3228,6 @@ void wxGrid::Init()
     m_colResizeCursor = wxCursor( wxCURSOR_SIZEWE );
 
     m_currentCellCoords = wxGridNoCellCoords;
-
-    m_selectionBackground = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
-    m_selectionForeground = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
 
     m_editable = true;  // default for whole grid
 
@@ -3397,7 +3357,7 @@ void wxGrid::CalcDimensions()
     // take into account editor if shown
     if ( IsCellEditControlShown() )
     {
-        const wxRect rect = GetCurrentCellEditorPtr()->GetWindow()->GetRect();
+        const wxRect rect = GetActiveCellEditorPtr()->GetWindow()->GetRect();
         if ( rect.GetRight() > w )
             w = rect.GetRight();
         if ( rect.GetBottom() > h )
@@ -5150,7 +5110,7 @@ wxGrid::DoGridCellLeftUp(wxMouseEvent& event,
             ClearSelection();
 
             if ( DoEnableCellEditControl(wxGridActivationSource::From(event)) )
-                GetCurrentCellEditorPtr()->StartingClick();
+                GetActiveCellEditorPtr()->StartingClick();
 
             m_waitForSlowClick = false;
         }
@@ -6206,6 +6166,7 @@ void wxGrid::OnSize(wxSizeEvent& event)
     {
         // reposition our children windows
         CalcWindowSizes();
+        RepositionCellEditControlIfNecessary();
         InvalidateOverlaySelection();
         event.Skip();
     }
@@ -6277,6 +6238,47 @@ void wxGrid::OnDPIChanged(wxDPIChangedEvent& event)
     CalcDimensions();
 
     event.Skip();
+}
+
+void wxGrid::OnSysColourChanged(wxSysColourChangedEvent& event)
+{
+    UpdateColours();
+    event.Skip();
+}
+
+void wxGrid::UpdateColours()
+{
+    auto windowText = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+
+    if ( !m_hasUserCellBg )
+    {
+        auto window = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+        m_defaultCellAttr->SetBackgroundColour(window);
+        m_gridWin->SetBackgroundColour(window);
+    }
+
+    if ( !m_hasUserCellFg )
+    {
+        m_defaultCellAttr->SetTextColour(windowText);
+        m_gridWin->SetForegroundColour(windowText);
+    }
+
+    if ( !m_hasUserLabelBg )
+    {
+        auto btnFace = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
+        m_labelBackgroundColour = btnFace;
+        m_cornerLabelWin->SetBackgroundColour(btnFace);
+        m_rowLabelWin->SetBackgroundColour(btnFace);
+        m_colLabelWin->SetBackgroundColour(btnFace);
+    }
+
+    if ( !m_hasUserLabelFg )
+    {
+        m_labelTextColour = windowText;
+        m_cornerLabelWin->SetForegroundColour(windowText);
+        m_rowLabelWin->SetForegroundColour(windowText);
+        m_colLabelWin->SetForegroundColour(windowText);
+    }
 }
 
 void wxGrid::OnKeyDown( wxKeyEvent& event )
@@ -6594,7 +6596,7 @@ void wxGrid::OnChar( wxKeyEvent& event )
 
             if ( DoEnableCellEditControl(wxGridActivationSource::From(event))
                     && !specialEditKey )
-                editor->StartingKey(event);
+                GetActiveCellEditorPtr()->StartingKey(event);
         }
         else
         {
@@ -6893,7 +6895,7 @@ void wxGrid::DrawCell( wxDC& dc, const wxGridCellCoords& coords )
     // Note: However, only if it is really _shown_, i.e. not hidden!
     if ( isCurrent && IsCellEditControlShown() )
     {
-        attr->GetEditorPtr(this, row, col)->PaintBackground(dc, rect, *attr);
+        GetActiveCellEditorPtr()->PaintBackground(dc, rect, *attr);
     }
     else
     {
@@ -6939,7 +6941,7 @@ void wxGrid::DrawCellHighlight( wxDC& dc, const wxGridCellAttr *attr )
         // use the cellHighlightColour if the cell is inside a selection, this
         // will ensure the cell is always visible.
         const auto penCol = (UsesOverlaySelection() || !IsInSelection(row, col))
-                          ? m_cellHighlightColour : m_selectionForeground;
+                          ? GetCellHighlightColour() : GetSelectionForeground();
 
         dc.SetPen(wxPen(penCol, penWidth));
         dc.SetBrush(*wxTRANSPARENT_BRUSH);
@@ -7069,7 +7071,7 @@ void wxGrid::DrawFrozenBorder(wxDC& dc, wxGridWindow *gridWindow, const wxRect& 
         {
             right = wxMin(right, GetColRight(m_numCols - 1));
 
-            dc.SetPen(wxPen(m_gridFrozenBorderColour,
+            dc.SetPen(wxPen(GetGridFrozenBorderColour(),
                             gridFrozenBorderPenWidth));
             dc.DrawLine(left, bottom, right, bottom);
         }
@@ -7078,7 +7080,7 @@ void wxGrid::DrawFrozenBorder(wxDC& dc, wxGridWindow *gridWindow, const wxRect& 
         {
             bottom = wxMin(bottom, GetRowBottom(m_numRows - 1));
 
-            dc.SetPen(wxPen(m_gridFrozenBorderColour,
+            dc.SetPen(wxPen(GetGridFrozenBorderColour(),
                             gridFrozenBorderPenWidth));
             dc.DrawLine(right, top, right, bottom);
         }
@@ -7092,7 +7094,7 @@ void wxGrid::DrawLabelFrozenBorder(wxDC& dc, wxWindow *window, bool isRow)
         int cw, ch;
         window->GetClientSize(&cw, &ch);
 
-        dc.SetPen(wxPen(m_gridFrozenBorderColour,
+        dc.SetPen(wxPen(GetGridFrozenBorderColour(),
                         m_gridFrozenBorderPenWidth));
 
         if ( isRow )
@@ -8003,7 +8005,7 @@ bool wxGrid::IsCellEditControlShown() const
 
     if ( m_cellEditCtrlEnabled )
     {
-        if ( wxGridCellEditorPtr editor = GetCurrentCellEditorPtr() )
+        if ( wxGridCellEditorPtr editor = GetActiveCellEditorPtr() )
         {
             if ( editor->IsCreated() )
             {
@@ -8022,10 +8024,125 @@ void wxGrid::ShowCellEditControl()
         if ( !IsVisible( m_currentCellCoords, false ) )
         {
             m_cellEditCtrlEnabled = false;
+            m_activeCellEditor.reset(nullptr);
             return;
         }
 
         DoShowCellEditControl(wxGridActivationSource::FromProgram());
+    }
+}
+
+void wxGrid::RepositionCellEditControlIfNecessary()
+{
+    if ( !IsCellEditControlShown() )
+        return;
+
+    wxGridCellEditorPtr editor = GetCurrentCellEditorPtr();
+    wxWindow * const editorWindow = editor->GetWindow();
+
+    int row = m_currentCellCoords.GetRow();
+    int col = m_currentCellCoords.GetCol();
+    wxRect rect = CellToRect(m_currentCellCoords);
+
+    wxGridCellAttrPtr attr = GetCellAttrPtr(row, col);
+    wxGridWindow *gridWindow = CellToGridWindow(row, col);
+
+    // if this is part of a multicell, find owner (topleft)
+    int cell_rows, cell_cols;
+    if ( GetCellSize( row, col, &cell_rows, &cell_cols ) == CellSpan_Inside )
+    {
+        row += cell_rows;
+        col += cell_cols;
+        m_currentCellCoords.SetRow( row );
+        m_currentCellCoords.SetCol( col );
+    }
+
+    const wxRect rectOld = editorWindow->GetRect();
+
+    PositionCellEditControl(editor.get(), attr.get(), gridWindow, row, col, rect);
+
+    wxRect rectRefresh = rectOld;
+    rectRefresh.Union(editorWindow->GetRect());
+    gridWindow->Refresh(false, &rectRefresh);
+}
+
+void wxGrid::PositionCellEditControl(wxGridCellEditor* editor,
+                                     wxGridCellAttr* attr,
+                                     wxGridWindow* gridWindow,
+                                     int row,
+                                     int col,
+                                     wxRect rect)
+{
+    rect.Offset(-GetGridWindowOffset(gridWindow));
+
+    // convert to scrolled coords
+    CalcGridWindowScrolledPosition( rect.x, rect.y, &rect.x, &rect.y, gridWindow );
+
+#ifdef __WXQT__
+    // Substract 2 pixel in every dimension to fit in the cell area.
+    // If not, Qt will draw the control outside the cell.
+    // TODO: Check offsets under Qt.
+    rect.Deflate(2, 2);
+#endif
+
+    // resize editor to overflow into righthand cells if allowed
+    int maxWidth = rect.width;
+    wxString value = GetCellValue(row, col);
+    if ( !value.empty() && attr->GetOverflow() )
+    {
+        int y;
+        GetTextExtent(value, &maxWidth, &y, nullptr, nullptr, &attr->GetFont());
+        if ( maxWidth < rect.width )
+            maxWidth = rect.width;
+    }
+
+    if ( (maxWidth > rect.width) && (col < m_numCols) && m_table )
+    {
+        int cell_rows, cell_cols;
+        GetCellSize( row, col, &cell_rows, &cell_cols );
+        // may have changed earlier
+        for ( int i = col + cell_cols; i < m_numCols; i++ )
+        {
+            int c_rows, c_cols;
+            GetCellSize( row, i, &c_rows, &c_cols );
+
+            // looks weird going over a multicell
+            if ( m_table->IsEmptyCell( row, i ) &&
+                    (rect.width < maxWidth) && (c_rows == 1) )
+            {
+                rect.width += GetColWidth( i );
+            }
+            else
+                break;
+        }
+    }
+
+    editor->SetCellAttr( attr );
+    editor->SetSize( rect );
+    editor->SetCellAttr(nullptr);
+
+    // Note that the actual rectangle used by the editor could be
+    // different from the one we proposed.
+    rect = editor->GetWindow()->GetRect();
+
+    // Ensure that the edit control fits into the visible part of the
+    // window by shifting it if necessary: we don't want to truncate
+    // any part of it by trying to position it too far to the left or
+    // top and we definitely don't want to start showing scrollbars by
+    // positioning it too far to the right or bottom.
+    const wxSize sizeMax = gridWindow->GetClientSize();
+    if ( !wxRect(sizeMax).Contains(rect) )
+    {
+        if ( rect.x < 0 )
+            rect.x = 0;
+        if ( rect.y < 0 )
+            rect.y = 0;
+        if ( rect.x > sizeMax.x - rect.width )
+            rect.x = sizeMax.x - rect.width;
+        if ( rect.y > sizeMax.y - rect.height )
+            rect.y = sizeMax.y - rect.height;
+
+        editor->GetWindow()->Move(rect.x, rect.y);
     }
 }
 
@@ -8082,6 +8199,7 @@ bool wxGrid::DoShowCellEditControl(const wxGridActivationSource& actSource)
     // before generating any events in case their user-defined handlers decide
     // to call EnableCellEditControl() to avoid reentrancy problems.
     m_cellEditCtrlEnabled = true;
+    m_activeCellEditor = editor;
 
     wxGridWindow *gridWindow = CellToGridWindow(row, col);
 
@@ -8094,18 +8212,6 @@ bool wxGrid::DoShowCellEditControl(const wxGridActivationSource& actSource)
         m_currentCellCoords.SetRow( row );
         m_currentCellCoords.SetCol( col );
     }
-
-    rect.Offset(-GetGridWindowOffset(gridWindow));
-
-    // convert to scrolled coords
-    CalcGridWindowScrolledPosition( rect.x, rect.y, &rect.x, &rect.y, gridWindow );
-
-#ifdef __WXQT__
-    // Substract 2 pixel in every dimension to fit in the cell area.
-    // If not, Qt will draw the control outside the cell.
-    // TODO: Check offsets under Qt.
-    rect.Deflate(2, 2);
-#endif
 
     if ( !editor->IsCreated() )
     {
@@ -8136,63 +8242,7 @@ bool wxGrid::DoShowCellEditControl(const wxGridActivationSource& actSource)
         editor->GetWindow()->Reparent(gridWindow);
     }
 
-    // resize editor to overflow into righthand cells if allowed
-    int maxWidth = rect.width;
-    wxString value = GetCellValue(row, col);
-    if ( !value.empty() && attr->GetOverflow() )
-    {
-        int y;
-        GetTextExtent(value, &maxWidth, &y, nullptr, nullptr, &attr->GetFont());
-        if (maxWidth < rect.width)
-            maxWidth = rect.width;
-    }
-
-    if ((maxWidth > rect.width) && (col < m_numCols) && m_table)
-    {
-        GetCellSize( row, col, &cell_rows, &cell_cols );
-        // may have changed earlier
-        for (int i = col + cell_cols; i < m_numCols; i++)
-        {
-            int c_rows, c_cols;
-            GetCellSize( row, i, &c_rows, &c_cols );
-
-            // looks weird going over a multicell
-            if (m_table->IsEmptyCell( row, i ) &&
-                    (rect.width < maxWidth) && (c_rows == 1))
-            {
-                rect.width += GetColWidth( i );
-            }
-            else
-                break;
-        }
-    }
-
-    editor->SetCellAttr( attr.get() );
-    editor->SetSize( rect );
-
-    // Note that the actual rectangle used by the editor could be
-    // different from the one we proposed.
-    rect = editor->GetWindow()->GetRect();
-
-    // Ensure that the edit control fits into the visible part of the
-    // window by shifting it if necessary: we don't want to truncate
-    // any part of it by trying to position it too far to the left or
-    // top and we definitely don't want to start showing scrollbars by
-    // positioning it too far to the right or bottom.
-    const wxSize sizeMax = gridWindow->GetClientSize();
-    if ( !wxRect(sizeMax).Contains(rect) )
-    {
-        if ( rect.x < 0 )
-            rect.x = 0;
-        if ( rect.y < 0 )
-            rect.y = 0;
-        if ( rect.x > sizeMax.x - rect.width )
-            rect.x = sizeMax.x - rect.width;
-        if ( rect.y > sizeMax.y - rect.height )
-            rect.y = sizeMax.y - rect.height;
-
-        editor->GetWindow()->Move(rect.x, rect.y);
-    }
+    PositionCellEditControl(editor.get(), attr.get(), gridWindow, row, col, rect);
 
     editor->Show( true, attr.get() );
 
@@ -8216,7 +8266,7 @@ void wxGrid::HideCellEditControl()
 
 void wxGrid::DoHideCellEditControl()
 {
-    wxGridCellEditorPtr editor = GetCurrentCellEditorPtr();
+    wxGridCellEditorPtr editor = GetActiveCellEditorPtr();
     const bool editorHadFocus = editor->GetWindow()->IsDescendant(FindFocus());
 
     if ( editor->GetWindow()->GetParent() != m_gridWin )
@@ -8279,6 +8329,7 @@ void wxGrid::DoAcceptCellEditControl()
     DoHideCellEditControl();
 
     DoSaveEditControlValue();
+    m_activeCellEditor.reset(nullptr);
 }
 
 void wxGrid::SaveEditControlValue()
@@ -8296,7 +8347,7 @@ void wxGrid::DoSaveEditControlValue()
 
     wxString oldval = GetCellValue(m_currentCellCoords);
 
-    wxGridCellEditorPtr editor = GetCurrentCellEditorPtr();
+    wxGridCellEditorPtr editor = GetActiveCellEditorPtr();
 
     wxString newval;
     if ( !editor->EndEdit(row, col, this, oldval, &newval) )
@@ -9372,6 +9423,7 @@ void wxGrid::SetLabelBackgroundColour( const wxColour& colour )
             RefreshArea(wxGA_Labels);
         }
     }
+    m_hasUserLabelBg = true;
 }
 
 void wxGrid::SetLabelTextColour( const wxColour& colour )
@@ -9388,6 +9440,7 @@ void wxGrid::SetLabelTextColour( const wxColour& colour )
             RefreshArea(wxGA_Labels);
         }
     }
+    m_hasUserLabelFg = true;
 }
 
 void wxGrid::SetLabelFont( const wxFont& font )
@@ -9588,6 +9641,12 @@ void wxGrid::SetCornerLabelValue( const wxString& s )
     }
 }
 
+wxColour wxGrid::GetGridLineColour() const
+{
+    return m_gridLineColour.IsOk() ? m_gridLineColour :
+        wxSystemSettings::GetColour(wxSYS_COLOUR_GRIDLINES);
+}
+
 void wxGrid::SetGridLineColour( const wxColour& colour )
 {
     if ( m_gridLineColour != colour )
@@ -9597,6 +9656,12 @@ void wxGrid::SetGridLineColour( const wxColour& colour )
         if ( GridLinesEnabled() )
             RedrawGridLines();
     }
+}
+
+wxColour wxGrid::GetCellHighlightColour() const
+{
+    return m_cellHighlightColour.IsOk() ? m_cellHighlightColour :
+        wxSystemSettings::SelectLightDark(*wxBLACK, *wxWHITE);
 }
 
 void wxGrid::SetCellHighlightColour( const wxColour& colour )
@@ -9648,6 +9713,12 @@ void wxGrid::SetCellHighlightROPenWidth(int width)
     }
 }
 
+wxColor wxGrid::GetGridFrozenBorderColour() const
+{
+    return m_gridFrozenBorderColour.IsOk() ? m_gridFrozenBorderColour :
+        wxSystemSettings::SelectLightDark(*wxBLACK, *wxWHITE);
+}
+
 void wxGrid::SetGridFrozenBorderColour(const wxColour &colour)
 {
     if ( m_gridFrozenBorderColour != colour )
@@ -9678,6 +9749,18 @@ void wxGrid::SetGridFrozenBorderPenWidth(int width)
                 m_frozenColGridWin->Refresh();
         }
     }
+}
+
+wxColour wxGrid::GetSelectionBackground() const
+{
+    return m_selectionBackground.IsOk() ? m_selectionBackground :
+        wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
+}
+
+wxColour wxGrid::GetSelectionForeground() const
+{
+    return m_selectionForeground.IsOk() ? m_selectionForeground :
+        wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
 }
 
 void wxGrid::RedrawGridLines()
@@ -9747,11 +9830,13 @@ void wxGrid::SetDefaultCellBackgroundColour( const wxColour& col )
 #if defined(__WXGTK__) || defined(__WXQT__)
     m_gridWin->SetBackgroundColour(col);
 #endif
+    m_hasUserCellBg = true;
 }
 
 void wxGrid::SetDefaultCellTextColour( const wxColour& col )
 {
     m_defaultCellAttr->SetTextColour(col);
+    m_hasUserCellFg = true;
 }
 
 void wxGrid::SetDefaultCellAlignment( int horiz, int vert )
@@ -11307,10 +11392,10 @@ DoGetRowOrColBlocks(wxGridBlocks blocks, const wxGridOperations& oper)
 {
     wxGridBlockCoordsVector res;
 
-    for ( wxGridBlocks::iterator it = blocks.begin(); it != blocks.end(); ++it )
+    for ( const auto& newBlock : blocks )
     {
-        const int firstNew = oper.SelectFirst(*it);
-        const int lastNew = oper.SelectLast(*it);
+        const int firstNew = oper.SelectFirst(newBlock);
+        const int lastNew = oper.SelectLast(newBlock);
 
         // Check if this block intersects any of the existing ones.
         //
@@ -11324,7 +11409,7 @@ DoGetRowOrColBlocks(wxGridBlocks blocks, const wxGridOperations& oper)
             {
                 // We didn't find any overlapping blocks, so add this one to
                 // the end.
-                res.push_back(*it);
+                res.push_back(newBlock);
                 break;
             }
 
@@ -11336,7 +11421,7 @@ DoGetRowOrColBlocks(wxGridBlocks blocks, const wxGridOperations& oper)
             {
                 // Not only it doesn't overlap this block, but it won't overlap
                 // any subsequent ones either, so insert it here and stop.
-                res.insert(res.begin() + n, *it);
+                res.insert(res.begin() + n, newBlock);
                 break;
             }
 

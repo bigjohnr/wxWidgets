@@ -18,10 +18,14 @@
 #endif // WX_PRECOMP
 
 #include "wx/intl.h"
+#include "wx/translation.h"
 #include "wx/uilocale.h"
 #include "wx/scopeguard.h"
+#include "wx/filename.h"
 
 #include "wx/private/glibc.h"
+
+#include "testfile.h"
 
 #if wxUSE_INTL
 
@@ -240,14 +244,62 @@ void IntlTestCase::IsAvailable()
     CPPUNIT_ASSERT_EQUAL( origLocale, setlocale(LC_ALL, nullptr) );
 }
 
+namespace
+{
+
+const wxString& GetTranslationsTestDomain()
+{
+    // Use a test-only domain so these tests don't accidentally find the sample
+    // internat catalogs when wxBUILD_SAMPLES=ALL copies them into the test
+    // lookup tree.
+    static const wxString s_domain("wx_test_internat");
+    return s_domain;
+}
+
+class TranslationsTestCatalogs
+{
+public:
+    TranslationsTestCatalogs()
+        : m_prefix("wxintltest-")
+    {
+        REQUIRE(m_prefix.IsOk());
+
+        CopyCatalog("en_GB");
+        CopyCatalog("fr");
+        CopyCatalog("ja");
+        CopyCatalog("xart-dothraki");
+
+        wxFileTranslationsLoader::AddCatalogLookupPathPrefix(
+            m_prefix.GetName());
+    }
+
+private:
+    void CopyCatalog(const wxString& lang)
+    {
+        wxFileName dir(m_prefix.GetName(), wxString());
+        dir.AppendDir(lang);
+        REQUIRE( wxMkdir(dir.GetPath()) );
+
+        wxFileName src("intl", "internat", "mo");
+        src.AppendDir(lang);
+
+        wxFileName dst(dir.GetPath(), GetTranslationsTestDomain(), "mo");
+        REQUIRE( wxCopyFile(src.GetFullPath(), dst.GetFullPath()) );
+    }
+
+    TempDir m_prefix;
+};
+
+} // anonymous namespace
+
 TEST_CASE("wxTranslations::AddCatalog", "[translations]")
 {
     // We currently have translations for British English, French and Japanese
     // in this test directory, check that loading those succeeds but loading
     // others doesn't.
-    wxFileTranslationsLoader::AddCatalogLookupPathPrefix("./intl");
+    TranslationsTestCatalogs catalogs;
 
-    const wxString domain("internat");
+    const wxString domain(GetTranslationsTestDomain());
 
     wxTranslations trans;
 
@@ -291,11 +343,51 @@ TEST_CASE("wxTranslations::AddCatalog", "[translations]")
     }
 }
 
+TEST_CASE("wxTranslations::CorruptCatalog", "[translations]")
+{
+    // Build a minimal MO catalog with two strings whose second translated
+    // entry declares a length of 0xffffffff. Adding this to the (valid) string
+    // offset wraps around in 32-bit arithmetic and used to defeat the bounds
+    // check in StringAtOfs(), letting FillHash() read past the end of the data.
+    //
+    // The catalog is 64 bytes; the backing array has one extra byte because
+    // wxCharTypeBuffer copies len+1 bytes (it assumes a trailing NUL).
+    const size_t moLen = 64;
+    unsigned char mo[moLen + 1];
+    memset(mo, 0, sizeof(mo));
+
+    auto put32 = [](unsigned char* p, wxUint32 v)
+    {
+        p[0] = (unsigned char)(v & 0xff);
+        p[1] = (unsigned char)((v >> 8) & 0xff);
+        p[2] = (unsigned char)((v >> 16) & 0xff);
+        p[3] = (unsigned char)((v >> 24) & 0xff);
+    };
+
+    put32(mo +  0, 0x950412de); // magic
+    put32(mo +  8, 2);          // number of strings
+    put32(mo + 12, 28);         // offset of original strings table
+    put32(mo + 16, 44);         // offset of translated strings table
+    // original strings table
+    put32(mo + 28, 0);  put32(mo + 32, 60); // ""
+    put32(mo + 36, 1);  put32(mo + 40, 61); // "x"
+    // translated strings table
+    put32(mo + 44, 0);          put32(mo + 48, 60); // ""
+    put32(mo + 52, 0xffffffff); put32(mo + 56, 63); // bogus length
+    mo[61] = 'x';
+    mo[63] = 'A'; // unterminated string at the very end of the buffer
+
+    wxCharTypeBuffer<char> data(reinterpret_cast<const char*>(mo), moLen);
+    wxMsgCatalog* const cat = wxMsgCatalog::CreateFromData(data, "corrupt");
+    CHECK( cat == nullptr );
+    delete cat;
+}
+
 TEST_CASE("wxTranslations::GetBestTranslation", "[translations]")
 {
-    wxFileTranslationsLoader::AddCatalogLookupPathPrefix("./intl");
+    TranslationsTestCatalogs catalogs;
 
-    const wxString domain("internat");
+    const wxString domain(GetTranslationsTestDomain());
 
     wxTranslations trans;
     wxON_BLOCK_EXIT1( wxUnsetEnv, "WXLANGUAGE" );

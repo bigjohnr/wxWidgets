@@ -38,9 +38,7 @@
 #include "wx/msw/private.h"
 #include "wx/msw/private/winstyle.h"
 
-#if wxUSE_UXTHEME
-    #include "wx/msw/uxtheme.h"
-#endif
+#include "wx/msw/uxtheme.h"
 
 #if wxUSE_TOOLTIPS
     #include "wx/tooltip.h"
@@ -523,10 +521,6 @@ void wxComboBox::MSWRecreate()
         wxColour colBg = m_backgroundColour;
         m_backgroundColour = wxNullColour;
         SetBackgroundColour(colBg);
-    }
-    else
-    {
-        SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
     }
 
     // Revert the old string value

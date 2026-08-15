@@ -72,10 +72,24 @@ public:
     wxSVGAttributes& Role(const wxString& role);
 
     /**
+        Returns the @c role attribute.
+
+        @since 3.3.3
+    */
+    wxString GetRole() const;
+
+    /**
         Sets the @c aria-label attribute: a short accessible name read
         aloud by screen readers. Use when no visible text label exists.
     */
     wxSVGAttributes& AriaLabel(const wxString& label);
+
+    /**
+        Returns the @c aria-label attribute.
+
+        @since 3.3.3
+    */
+    wxString GetAriaLabel() const;
 
     /**
         Sets the @c aria-labelledby attribute: instead of supplying a name
@@ -85,11 +99,25 @@ public:
     wxSVGAttributes& AriaLabelledBy(const wxString& id);
 
     /**
+        Returns the @c aria-labelledby attribute.
+
+        @since 3.3.3
+    */
+    wxString GetAriaLabelledBy() const;
+
+    /**
         Sets the @c aria-describedby attribute: points at the @c id of
         another element whose text content provides a longer description,
         announced after the accessible name.
     */
     wxSVGAttributes& AriaDescribedBy(const wxString& id);
+
+    /**
+        Returns the @c aria-describedby attribute.
+
+        @since 3.3.3
+    */
+    wxString GetAriaDescribedBy() const;
 
     /**
         Sets the @c aria-hidden attribute.
@@ -102,11 +130,25 @@ public:
     wxSVGAttributes& AriaHidden(bool hidden = true);
 
     /**
+        Returns @true if the @c aria-hidden attribute is set to @c "true".
+
+        @since 3.3.3
+    */
+    bool IsAriaHidden() const;
+
+    /**
         Sets the @c aria-details attribute: points at the @c id of another
         element containing extended information about this one
         (e.g., a data table describing a chart).
     */
     wxSVGAttributes& AriaDetails(const wxString& id);
+
+    /**
+        Returns the @c aria-details attribute.
+
+        @since 3.3.3
+    */
+    wxString GetAriaDetails() const;
 
     /**
         Sets the @c aria-roledescription attribute: a human-readable,
@@ -116,11 +158,25 @@ public:
     wxSVGAttributes& AriaRoleDescription(const wxString& desc);
 
     /**
+        Returns the @c aria-roledescription attribute.
+
+        @since 3.3.3
+    */
+    wxString GetAriaRoleDescription() const;
+
+    /**
         Sets the @c id attribute, giving the element a unique identifier
         other attributes (such as @c aria-labelledby) or stylesheets can
         reference.
     */
     wxSVGAttributes& Id(const wxString& id);
+
+    /**
+        Returns the @c id attribute.
+
+        @since 3.3.3
+    */
+    wxString GetId() const;
 
     /**
         Sets the @c class attribute, used to associate the element with
@@ -129,12 +185,28 @@ public:
     wxSVGAttributes& Class(const wxString& classname);
 
     /**
+        Returns the @c class attribute.
+
+        @since 3.3.3
+    */
+    wxString GetClass() const;
+
+    /**
         Adds or updates an arbitrary attribute.
 
         If @a name is already set, its value is replaced; otherwise a new
         entry is appended.
     */
     wxSVGAttributes& Add(const wxString& name, const wxString& value);
+
+    /**
+        Returns the value of the attribute with the given @a name.
+
+        Returns an empty string if the attribute is not set.
+
+        @since 3.3.3
+    */
+    wxString GetAttribute(const wxString& name) const;
 
     /// Returns @true if no attributes have been set.
     bool IsEmpty() const;
@@ -155,6 +227,15 @@ public:
     corresponding to the screen display context, wxSVGFileDC, by passing the
     wxSVGFileDC as a parameter instead of a wxDC. Thus the wxSVGFileDC
     is a write-only class.
+
+    Starting with wxWidgets 3.3.3, wxSVGFileDC provides integrated support
+    for @ref wxGraphicsContext. By calling GetGraphicsContext(), you can
+    access a @ref wxSVGGraphicsContext which supports advanced vector
+    features such as:
+    - Cubic and quadratic Bézier curves via @ref wxGraphicsPath.
+    - Linear and radial gradient brushes.
+    - Semi-transparent colors and alpha blending.
+    - Arbitrary affine transformations.
 
     As the wxSVGFileDC is a vector format, raster operations like GetPixel()
     are unlikely to be supported. However, the SVG specification allows for
@@ -263,6 +344,23 @@ public:
     void EndAccessibleGroup();
 
     /**
+        Opens a new layer with the given @a opacity.
+
+        All drawing commands until the matching EndLayer() call will be
+        composited with this opacity. Layers can be nested.
+
+        @since 3.3.3
+    */
+    void BeginLayer(double opacity);
+
+    /**
+        Closes the layer opened by the most recent BeginLayer() call.
+
+        @since 3.3.3
+    */
+    void EndLayer();
+
+    /**
         Returns the SVG document as a string.
 
         This can be used to retrieve the generated SVG content regardless of
@@ -288,10 +386,31 @@ public:
     bool Save();
 
     /**
+        Returns the graphics context associated with this DC.
+
+        The returned object is a @ref wxSVGGraphicsContext instance.
+        While @ref wxSVGFileDC provides standard @ref wxDC drawing methods,
+        retrieving the @ref wxGraphicsContext allows using more advanced
+        drawing features that are not available in the base @ref wxDC API,
+        such as:
+        - Complex paths including cubic and quadratic Bézier curves.
+        - Linear and radial gradient brushes.
+        - Transparency and alpha blending for all drawing operations.
+        - Advanced coordinate transformations (scaling, rotation, skewing)
+          applied to groups of objects.
+
+        Note that any state changes (pen, brush, font) made to the returned
+        context are mirrored back to the DC, and vice versa.
+
+        @since 3.3.3
+    */
+    virtual wxGraphicsContext* GetGraphicsContext() const;
+
+    /**
         Destroys the current clipping region so that none of the DC is clipped.
         Since intersections arising from sequential calls to SetClippingRegion are represented
-        with nested SVG group elements (\<g\>), all such groups are closed when
-        DestroyClippingRegion is called.
+        with nested SVG group elements (`<g>`), all such groups are closed when
+        @c DestroyClippingRegion is called.
     */
     void DestroyClippingRegion();
 
@@ -355,6 +474,32 @@ public:
         Closes the accessible group opened by the constructor.
     */
     ~wxSVGAccessibleGroup();
+};
+
+/**
+    @class wxSVGLayer
+
+    RAII helper that opens a layer on a wxSVGFileDC when constructed and
+    closes it when destroyed. Use it in place of a manual
+    wxSVGFileDC::BeginLayer() / wxSVGFileDC::EndLayer() pair so the layer
+    is reliably closed on scope exit.
+
+    @library{wxcore}
+    @category{dc}
+    @since 3.3.3
+*/
+class wxSVGLayer
+{
+public:
+    /**
+        Opens a new layer on @a dc with the given @a opacity.
+    */
+    wxSVGLayer(wxSVGFileDC& dc, double opacity);
+
+    /**
+        Closes the layer opened by the constructor.
+    */
+    ~wxSVGLayer();
 };
 
 /**
