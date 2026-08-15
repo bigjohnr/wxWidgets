@@ -80,6 +80,7 @@ wxBEGIN_EVENT_TABLE(wxRibbonToolBar, wxRibbonControl)
     EVT_PAINT(wxRibbonToolBar::OnPaint)
     EVT_SIZE(wxRibbonToolBar::OnSize)
     EVT_DPI_CHANGED(wxRibbonToolBar::OnDPIChanged)
+    EVT_SYS_COLOUR_CHANGED(wxRibbonToolBar::OnSysColourChanged)
 wxEND_EVENT_TABLE()
 
 wxRibbonToolBar::wxRibbonToolBar()
@@ -1025,6 +1026,12 @@ void wxRibbonToolBar::OnDPIChanged(wxDPIChangedEvent& event)
 {
     Realize();
     event.Skip();
+}
+
+void wxRibbonToolBar::OnSysColourChanged(wxSysColourChangedEvent& event)
+{
+    event.Skip();
+    m_art->UpdateColoursFromSystem();
 }
 
 // Finds the best width and height given the parents' width and height

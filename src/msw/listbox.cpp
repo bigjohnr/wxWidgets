@@ -29,6 +29,7 @@
 #endif
 
 #include "wx/msw/private.h"
+#include "wx/msw/private/darkmode.h"
 #include "wx/msw/dc.h"
 
 #include <windowsx.h>
@@ -171,6 +172,16 @@ WXDWORD wxListBox::MSWGetStyle(long style, WXDWORD *exstyle) const
     msStyle |= LBS_USETABSTOPS;
 
     return msStyle;
+}
+
+void wxListBox::MSWGetDarkModeSupport(MSWDarkModeSupport& support) const
+{
+    // The default theme does not look good on starting with Windows 11
+    // build 26300.8553. DarkMode_DarkTheme looks OK.
+    if ( wxMSWDarkMode::HasDarkTheme() )
+        support.themeName = L"DarkMode_DarkTheme";
+    else
+        wxListBoxBase::MSWGetDarkModeSupport(support);
 }
 
 void wxListBox::MSWUpdateFontOnDPIChange(const wxSize& newDPI)

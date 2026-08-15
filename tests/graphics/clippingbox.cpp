@@ -1057,15 +1057,9 @@ static void OneDevRegionRTL(wxDC& dc, const wxBitmap& bmp, bool useTransformMatr
     dc.Clear();
     // right physical edge becomes left logical edge in a mirrored DC.
     const int x2 = s_dcSize.x - (x + w);
-    // In a mirrored DC, the device origin (0, 0) is always at the top left
-    // of the DC under wxMSW, but under wxGTK3 is at the top right.
-#if defined(__WXGTK3__) || defined(__WXQT__)
+
     wxPoint pos = dc.DeviceToLogical(x, y);
     wxSize dim = dc.DeviceToLogicalRel(w, h);
-#else
-    wxPoint pos = dc.DeviceToLogical(s_dcSize.x-x, y);
-    wxSize dim = dc.DeviceToLogicalRel(-w, h);
-#endif
 
     CheckClipBox(dc, bmp,
                  pos.x, pos.y, dim.x, dim.y,
@@ -1259,6 +1253,9 @@ static void OneDevRegionNonRect(wxDC& dc, const wxBitmap& bmp, bool checkExtCoor
     {
         wxGraphicsRenderer* rend = gc->GetRenderer();
         gc = rend->CreateContext(memDC);
+    }
+    if ( gc )
+    {
         gc->SetAntialiasMode(wxANTIALIAS_NONE);
         gc->DisableOffset();
         wxGCDC gdc(gc);
@@ -1820,7 +1817,7 @@ static void TwoDevRegionsNonOverlappingNegDim(wxDC& dc, const wxBitmap& bmp, boo
 
 static void DcAttributes(wxDC& dc)
 {
-    // Check if wxDC atrributes left unchanged
+    // Check if wxDC attributes left unchanged
     wxFont font = dc.GetFont().Bold().Smaller();
     wxPen pen(*wxYELLOW, 2);
     wxBrush brush = *wxBLUE_BRUSH;
@@ -1828,6 +1825,9 @@ static void DcAttributes(wxDC& dc)
     wxDCFontChanger fontChanger(dc, font);
     wxDCPenChanger penChanger(dc, pen);
     wxDCBrushChanger brushChanger(dc, brush);
+    // wxDC may normalize the selected font, so remember the realized font
+    // to check that changing the clipping region leaves it unchanged.
+    wxFont dcFont = dc.GetFont();
     wxCoord chWidth = dc.GetCharWidth();
     wxCoord chHeight = dc.GetCharHeight();
     wxFontMetrics fm = dc.GetFontMetrics();
@@ -1835,7 +1835,7 @@ static void DcAttributes(wxDC& dc)
     dc.SetClippingRegion(10, 20, 30, 40);
     dc.DestroyClippingRegion();
 
-    CHECK(dc.GetFont() == font);
+    CHECK(dc.GetFont() == dcFont);
     CHECK(dc.GetPen() == pen);
     CHECK(dc.GetBrush() == brush);
     CHECK(dc.GetCharWidth() == chWidth);

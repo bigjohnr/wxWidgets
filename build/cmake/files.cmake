@@ -824,6 +824,7 @@ set(GUI_CMN_SRC
     src/common/statlinecmn.cpp
     src/common/stattextcmn.cpp
     src/common/stockitem.cpp
+    src/common/svggc.cpp
     src/common/tbarbase.cpp
     src/common/textcmn.cpp
     src/common/textentrycmn.cpp
@@ -1025,6 +1026,7 @@ set(GUI_CMN_HDR
     wx/statbox.h
     wx/stattext.h
     wx/statusbr.h
+    wx/svggc.h
     wx/systhemectrl.h
     wx/taskbarbutton.h
     wx/testing.h
@@ -1639,6 +1641,7 @@ set(MSW_LOWLEVEL_SRC
     src/msw/appprogress.cpp
     src/msw/taskbarbutton.cpp
     src/msw/power.cpp
+    src/msw/taskdlg.cpp
 )
 
 set(MSW_LOWLEVEL_HDR

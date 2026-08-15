@@ -44,6 +44,7 @@
 #include "wx/msw/private.h"
 #include "wx/msw/dc.h"
 #include "wx/msw/uxtheme.h"
+#include "wx/msw/private/dc.h"
 
 // ---------------------------------------------------------------------------
 // macro
@@ -51,78 +52,6 @@
 
 // hide the ugly cast
 #define GetHMenuOf(menu)    ((HMENU)menu->GetHMenu())
-
-// ----------------------------------------------------------------------------
-// helper classes for temporarily changing HDC parameters
-// ----------------------------------------------------------------------------
-
-namespace
-{
-
-// This class just stores an HDC.
-class HDCHandler
-{
-protected:
-    HDCHandler(HDC hdc) : m_hdc(hdc) { }
-
-    const HDC m_hdc;
-};
-
-class HDCTextColChanger : HDCHandler
-{
-public:
-    HDCTextColChanger(HDC hdc, COLORREF col)
-        : HDCHandler(hdc),
-          m_colOld(::SetTextColor(hdc, col))
-    {
-    }
-
-    ~HDCTextColChanger()
-    {
-        ::SetTextColor(m_hdc, m_colOld);
-    }
-
-private:
-    COLORREF m_colOld;
-};
-
-class HDCBgColChanger : HDCHandler
-{
-public:
-    HDCBgColChanger(HDC hdc, COLORREF col)
-        : HDCHandler(hdc),
-          m_colOld(::SetBkColor(hdc, col))
-    {
-    }
-
-    ~HDCBgColChanger()
-    {
-        ::SetBkColor(m_hdc, m_colOld);
-    }
-
-private:
-    COLORREF m_colOld;
-};
-
-class HDCBgModeChanger : HDCHandler
-{
-public:
-    HDCBgModeChanger(HDC hdc, int mode)
-        : HDCHandler(hdc),
-          m_modeOld(::SetBkMode(hdc, mode))
-    {
-    }
-
-    ~HDCBgModeChanger()
-    {
-        ::SetBkMode(m_hdc, m_modeOld);
-    }
-
-private:
-    int m_modeOld;
-};
-
-} // anonymous namespace
 
 // ============================================================================
 // implementation
@@ -158,9 +87,7 @@ public:
     // Wrapper around standard MARGINS structure providing some helper
     // functions and automatically initializing the margin fields to 0.
     struct Margins
-#if wxUSE_UXTHEME
         : MARGINS
-#endif // wxUSE_UXTHEME
     {
         Margins()
         {
@@ -188,12 +115,6 @@ public:
             rect.right += cyTopHeight;
             rect.bottom += cyBottomHeight;
         }
-
-#if !wxUSE_UXTHEME
-        // When MARGINS struct is not available, we need to define the fields
-        // we use ourselves.
-        int cxLeftWidth, cxRightWidth, cyTopHeight, cyBottomHeight;
-#endif // !wxUSE_UXTHEME
     };
 
     Margins ItemMargin;         // popup item margins
@@ -241,14 +162,12 @@ public:
             ms_instance = &s_menuData;
         }
 
-    #if wxUSE_UXTHEME
         bool theme = MenuLayout() == FullTheme;
         if ( ms_instance->Theme != theme )
         {
             ms_instance->Init(window);
         }
         else
-    #endif // wxUSE_UXTHEME
         {
             if ( ms_instance->dpi != window->GetDPI().y )
             {
@@ -269,10 +188,8 @@ public:
     // are not available or not supported on menu
     static bool IsUxThemeActive()
     {
-    #if wxUSE_UXTHEME
         if ( MenuLayout() == FullTheme )
             return true;
-    #endif // wxUSE_UXTHEME
         return false;
     }
 
@@ -286,10 +203,8 @@ public:
     static MenuLayoutType MenuLayout()
     {
         MenuLayoutType menu = Classic;
-    #if wxUSE_UXTHEME
         if ( wxUxThemeIsActive() )
             menu = FullTheme;
-    #endif // wxUSE_UXTHEME
         return menu;
     }
 
@@ -303,7 +218,6 @@ MenuDrawData* MenuDrawData::ms_instance = nullptr;
 
 void MenuDrawData::Init(wxWindow const* window)
 {
-#if wxUSE_UXTHEME
     if ( IsUxThemeActive() )
     {
         wxUxThemeHandle hTheme(window, L"MENU");
@@ -359,7 +273,6 @@ void MenuDrawData::Init(wxWindow const* window)
             SeparatorMargin.cyTopHeight -= 2;
     }
     else
-#endif // wxUSE_UXTHEME
     {
         const NONCLIENTMETRICS& metrics = wxMSWImpl::GetNonClientMetrics(window);
 
@@ -895,8 +808,7 @@ bool wxMenuItem::OnDrawItem(wxDC& dc, const wxRect& rc,
 {
     const MenuDrawData* data = MenuDrawData::Get(GetMenu());
 
-    wxMSWDCImpl *impl = (wxMSWDCImpl*) dc.GetImpl();
-    HDC hdc = GetHdcOf(*impl);
+    HDC hdc = dc.GetHDC();
 
     RECT rect;
     wxCopyRectToRECT(rc, rect);
@@ -936,7 +848,6 @@ bool wxMenuItem::OnDrawItem(wxDC& dc, const wxRect& rc,
         if ( data->MenuLayout() != MenuDrawData::FullTheme )
             rcText.top--;
 
-#if wxUSE_UXTHEME
         // If a custom background colour is explicitly specified, we should use
         // it instead of the default theme background.
         if ( !GetBackgroundColour().IsOk() && MenuDrawData::IsUxThemeActive() )
@@ -1049,7 +960,6 @@ bool wxMenuItem::OnDrawItem(wxDC& dc, const wxRect& rc,
             }
         }
         else
-#endif // wxUSE_UXTHEME
         {
             if ( IsSeparator() )
             {
@@ -1066,9 +976,8 @@ bool wxMenuItem::OnDrawItem(wxDC& dc, const wxRect& rc,
         // draw text label
         // using native API because it recognizes '&'
 
-        HDCTextColChanger changeTextCol(hdc, colText.GetPixel());
-        HDCBgColChanger changeBgCol(hdc, colBack.GetPixel());
-        HDCBgModeChanger changeBgMode(hdc, TRANSPARENT);
+        wxMSWImpl::wxTextColoursChanger textCol(hdc, colText, colBack);
+        wxMSWImpl::wxBkModeChanger bkMode(hdc, wxBRUSHSTYLE_TRANSPARENT);
 
         SelectInHDC selFont(hdc, GetHfontOf(font));
 
@@ -1205,32 +1114,30 @@ namespace
 {
 
 // helper function for draw coloured check mark
-void DrawColorCheckMark(HDC hdc, int x, int y, int cx, int cy, HDC hdcCheckMask, int idxColor)
+void DrawColorCheckMark(HDC hdc, int x, int y, int cx, int cy, HDC hdcCheckMask, wxSystemColour color)
 {
-    const COLORREF colBlack = RGB(0, 0, 0);
-    const COLORREF colWhite = RGB(255, 255, 255);
-
-    HDCTextColChanger changeTextCol(hdc, colBlack);
-    HDCBgColChanger changeBgCol(hdc, colWhite);
-    HDCBgModeChanger changeBgMode(hdc, TRANSPARENT);
+    wxMSWImpl::wxTextColoursChanger textCol(hdc, *wxBLACK, *wxWHITE);
+    wxMSWImpl::wxBkModeChanger bkMode(hdc, wxBRUSHSTYLE_TRANSPARENT);
 
     // memory DC for color bitmap
     MemoryHDC hdcMem(hdc);
     CompatibleBitmap hbmpMem(hdc, cx, cy);
     SelectInHDC selMem(hdcMem, hbmpMem);
 
+    const wxColour colCheck = wxSystemSettings::GetColour(color);
+    AutoHBRUSH hbr(colCheck.GetPixel());
+    SelectInHDC selBrush(hdcMem, hbr);
     RECT rect = { 0, 0, cx, cy };
-    ::FillRect(hdcMem, &rect, ::GetSysColorBrush(idxColor));
+    ::FillRect(hdcMem, &rect, hbr);
 
-    const COLORREF colCheck = ::GetSysColor(idxColor);
-    if ( colCheck == colWhite )
+    if ( colCheck == *wxWHITE )
     {
         ::BitBlt(hdc, x, y, cx, cy, hdcCheckMask, 0, 0, MERGEPAINT);
         ::BitBlt(hdc, x, y, cx, cy, hdcMem, 0, 0, SRCAND);
     }
     else
     {
-        if ( colCheck != colBlack )
+        if ( colCheck != *wxBLACK )
         {
             const DWORD ROP_DSna = 0x00220326;  // dest = (NOT src) AND dest
             ::BitBlt(hdcMem, 0, 0, cx, cy, hdcCheckMask, 0, 0, ROP_DSna);
@@ -1243,11 +1150,8 @@ void DrawColorCheckMark(HDC hdc, int x, int y, int cx, int cy, HDC hdcCheckMask,
 
 } // anonymous namespace
 
-void wxMenuItem::DrawStdCheckMark(WXHDC hdc_, const RECT* rc, wxODStatus stat)
+void wxMenuItem::DrawStdCheckMark(WXHDC hdc, const tagRECT* rc, wxODStatus stat)
 {
-    HDC hdc = (HDC)hdc_;
-
-#if wxUSE_UXTHEME
     if ( MenuDrawData::IsUxThemeActive() )
     {
         wxUxThemeHandle hTheme(GetMenu()->GetWindow(), L"MENU" , L"DARKMODE::MENU");
@@ -1279,7 +1183,6 @@ void wxMenuItem::DrawStdCheckMark(WXHDC hdc_, const RECT* rc, wxODStatus stat)
         hTheme.DrawBackground(hdc, *rc, MENU_POPUPCHECK, stateCheck);
     }
     else
-#endif // wxUSE_UXTHEME
     {
         int cx = rc->right - rc->left;
         int cy = rc->bottom - rc->top;
@@ -1299,15 +1202,15 @@ void wxMenuItem::DrawStdCheckMark(WXHDC hdc_, const RECT* rc, wxODStatus stat)
         if ( (stat & wxODDisabled) && !(stat & wxODSelected) )
         {
             DrawColorCheckMark(hdc, rc->left + 1, rc->top + 1,
-                               cx, cy, hdcMask, COLOR_3DHILIGHT);
+                               cx, cy, hdcMask, wxSYS_COLOUR_3DHILIGHT);
         }
 
         // then draw a check mark
-        int color = COLOR_MENUTEXT;
+        wxSystemColour color = wxSYS_COLOUR_MENUTEXT;
         if ( stat & wxODDisabled )
-            color = COLOR_BTNSHADOW;
+            color = wxSYS_COLOUR_BTNSHADOW;
         else if ( stat & wxODSelected )
-            color = COLOR_HIGHLIGHTTEXT;
+            color = wxSYS_COLOUR_HIGHLIGHTTEXT;
 
         DrawColorCheckMark(hdc, rc->left, rc->top, cx, cy, hdcMask, color);
     }
@@ -1323,7 +1226,6 @@ void wxMenuItem::GetFontToUse(wxFont& font) const
 
 void wxMenuItem::GetColourToUse(wxODStatus stat, wxColour& colText, wxColour& colBack) const
 {
-#if wxUSE_UXTHEME
     if ( MenuDrawData::IsUxThemeActive() )
     {
         wxUxThemeHandle hTheme(GetMenu()->GetWindow(), L"MENU", L"DARKMODE::MENU");
@@ -1362,7 +1264,6 @@ void wxMenuItem::GetColourToUse(wxODStatus stat, wxColour& colText, wxColour& co
         }
     }
     else
-#endif // wxUSE_UXTHEME
     {
         wxOwnerDrawn::GetColourToUse(stat, colText, colBack);
     }

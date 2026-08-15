@@ -13,7 +13,7 @@ dnl ---------------------------------------------------------------------------
 dnl initialization
 dnl ---------------------------------------------------------------------------
 
-AC_INIT([wxWidgets], [3.3.3], [wx-dev@googlegroups.com])
+AC_INIT([wxWidgets], [3.3.4], [wx-dev@googlegroups.com])
 
 dnl the file passed to AC_CONFIG_SRCDIR should be specific to our package
 AC_CONFIG_SRCDIR([wx-config.in])
@@ -39,7 +39,7 @@ dnl wx_release_number += 1
 
 wx_major_version_number=3
 wx_minor_version_number=3
-wx_release_number=3
+wx_release_number=4
 wx_subrelease_number=0
 
 WX_RELEASE=$wx_major_version_number.$wx_minor_version_number
@@ -153,6 +153,11 @@ case "${host}" in
     dnl many standard declarations in HP-UX headers are only included if either
     dnl _HPUX_SOURCE is defined, see stdsyms(5)
     CPPFLAGS="-D_HPUX_SOURCE $CPPFLAGS"
+  ;;
+  *-*-android* )
+    USE_LINUX=1
+    AC_DEFINE(__LINUX__)
+    LIBS="-llog $LIBS"
   ;;
   *-*-linux* )
     USE_LINUX=1
@@ -1046,7 +1051,6 @@ WX_ARG_FEATURE(dccache,     [  --enable-dccache        cache temporary wxDC obje
 WX_ARG_FEATURE(ps-in-msw,   [  --enable-ps-in-msw      use PS printing in wxMSW (Win32 only)], wxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW)
 WX_ARG_FEATURE(ownerdrawn,  [  --enable-ownerdrawn     use owner drawn controls (Win32 and OS/2 only)], wxUSE_OWNER_DRAWN)
 WX_ARG_FEATURE(taskbarbutton,[  --enable-taskbarbutton  enable wxTaskBarButton (Win32 only)], wxUSE_TASKBARBUTTON)
-WX_ARG_FEATURE(uxtheme,     [  --enable-uxtheme        enable support for Windows XP themed look (Win32 only)], wxUSE_UXTHEME)
 WX_ARG_FEATURE(wxdib,       [  --enable-wxdib          use wxDIB class (Win32 only)], wxUSE_DIB)
 
 dnl Turn off MSW-only IE webview backend here to avoid reporting it as "on" in
@@ -1310,15 +1314,20 @@ if test "x$wxUSE_MACOSX_VERSION_MIN" = "xno"; then
 elif test "x$wxUSE_MACOSX_VERSION_MIN" = "xyes"; then
     if test "x$wxUSE_MACOSX_SDK" != "x"; then
         AC_MSG_CHECKING([SDK deployment version])
-dnl We need to quote the next line where we don't need macros and do need [] in the regex
-[
-        MACOSX_SDK_PLIST_VERSION_MIN=`defaults read "$wxUSE_MACOSX_SDK/SDKSettings" buildSettings | grep '^ *"\{0,1\}MACOSX_DEPLOYMENT_TARGET"\{0,1\} *= *"\{0,1\}[^"]*"\{0,1\}; *$' | sed 's/^ *"\{0,1\}MACOSX_DEPLOYMENT_TARGET"\{0,1\} *= *"\{0,1\}\([^"]*\)"\{0,1\} *; *$/\1/'`
-]
-        # If that failed, try again with the new key
+        defaultProperties=`defaults read "$wxUSE_MACOSX_SDK/SDKSettings" DefaultProperties`
+
+        dnl Take the first (earliest, because they are sorted) supported
+        dnl deployment target from the SDKSettings.plist file and remove
+        dnl leading spaces, quotes and trailing comma from it.
+        MACOSX_SDK_PLIST_VERSION_MIN=`echo "$defaultProperties" | sed -n -e '1,/DEPLOYMENT_TARGET_SUGGESTED_VALUES/d; s/^ *//; s/"//g; s/,//p; q'`
+
+        dnl If DEPLOYMENT_TARGET_SUGGESTED_VALUES doesn't exist, as it was in
+        dnl 10.11..10.13 SDKs, try MACOSX_DEPLOYMENT_TARGET instead.
         if test "x$MACOSX_SDK_PLIST_VERSION_MIN" = "x"; then
-[
-            MACOSX_SDK_PLIST_VERSION_MIN=`defaults read "$wxUSE_MACOSX_SDK/SDKSettings" DefaultProperties | grep '^ *"\{0,1\}MACOSX_DEPLOYMENT_TARGET"\{0,1\} *= *"\{0,1\}[^"]*"\{0,1\}; *$' | sed 's/^ *"\{0,1\}MACOSX_DEPLOYMENT_TARGET"\{0,1\} *= *"\{0,1\}\([^"]*\)"\{0,1\} *; *$/\1/'`
-]
+            dnl We need to quote the next line where we don't need macros and do need [] in the regex
+            [
+                MACOSX_SDK_PLIST_VERSION_MIN=`echo "$defaultProperties" | sed -n -e 's/^ *"\{0,1\}MACOSX_DEPLOYMENT_TARGET"\{0,1\} *= *"\{0,1\}\([^"]*\)"\{0,1\} *; *$/\1/p'`
+            ]
         fi
 
         if test "x$MACOSX_SDK_PLIST_VERSION_MIN" != "x"; then
@@ -3091,15 +3100,71 @@ installed, where VER is 2, 3 or 4.
             fi
 
             if test -n "$WAYLAND_SCANNER" ; then
+                dnl Check if we can use the session management protocol which
+                dnl normally requires GTK >= 3.24.53 but allow using it with
+                dnl the versions of 3.24.52 that already have the support
+                dnl required for it, at least until 3.24.53 is released.
+                AC_CACHE_CHECK([for support of the Wayland session management protocol],
+                    wx_cv_gtk_wayland_sm,
+                    [
+                        GTK_VERSION=`$PKG_CONFIG --modversion gtk+-3.0`
+                        AS_VERSION_COMPARE([$GTK_VERSION], [3.24.52],
+                            wx_cv_gtk_wayland_sm=no,
+                            wx_cv_gtk_wayland_sm=maybe,
+                            wx_cv_gtk_wayland_sm=yes
+                        )
+
+                        if test "$wx_cv_gtk_wayland_sm" = "maybe"; then
+                            save_CFLAGS=$CFLAGS
+                            save_LIBS=$LIBS
+                            CFLAGS="$CFLAGS $TOOLKIT_INCLUDE"
+                            LIBS="$LIBS $GUI_TK_LIBRARY"
+                            AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <gdk/gdkwayland.h>],
+                                [
+                                    gdk_wayland_window_get_xdg_toplevel(0)
+                                ])],
+                                wx_cv_gtk_wayland_sm=yes,
+                                wx_cv_gtk_wayland_sm=no
+                            )
+                            LIBS=$save_LIBS
+                            CFLAGS=$save_CFLAGS
+                        fi
+                    ]
+                )
+
+                if test "$wx_cv_gtk_wayland_sm" = "yes"; then
+                    dnl We don't check for wayland-protocols being installed as
+                    dnl it's a dependency of libgtk-3-dev or similar, and so
+                    dnl should be available.
+                    AC_CACHE_CHECK([for wayland-protocols data directory],
+                        wx_cv_wayland_protocols_dir,
+                        [
+                            wx_cv_wayland_protocols_dir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
+                        ]
+                    )
+                    WAYLAND_PROTOCOLS_DIR=$wx_cv_wayland_protocols_dir
+
+                    AC_DEFINE(wxHAVE_WAYLAND_SESSION_MANAGEMENT)
+                else
+                    dnl Don't bother running wayland-scanner for this protocol.
+                    WAYLAND_SM_SUPPORT=':'
+                fi
+
                 AC_DEFINE(wxHAVE_WAYLAND_CLIENT)
                 AC_CONFIG_COMMANDS([wayland-protocols],
                     [
                         mkdir -p lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols
                         $WAYLAND_SCANNER client-header $srcdir/src/unix/protocols/pointer-warp-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/pointer-warp-v1-client-protocol.h
                         $WAYLAND_SCANNER private-code $srcdir/src/unix/protocols/pointer-warp-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/pointer-warp-v1-client-protocol.c
+                        $WAYLAND_SM_SUPPORT $WAYLAND_SCANNER client-header $srcdir/src/unix/protocols/xdg-session-management-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-session-management-v1-client-protocol.h
+                        $WAYLAND_SM_SUPPORT $WAYLAND_SCANNER private-code $srcdir/src/unix/protocols/xdg-session-management-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-session-management-v1-client-protocol.c
+                        $WAYLAND_SM_SUPPORT $WAYLAND_SCANNER client-header $WAYLAND_PROTOCOLS_DIR/stable/xdg-shell/xdg-shell.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-shell-client-protocol.h
+                        $WAYLAND_SM_SUPPORT $WAYLAND_SCANNER private-code $WAYLAND_PROTOCOLS_DIR/stable/xdg-shell/xdg-shell.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-shell-client-protocol.c
                     ],
                     [
                         WAYLAND_SCANNER=$WAYLAND_SCANNER
+                        WAYLAND_SM_SUPPORT=$WAYLAND_SM_SUPPORT
+                        WAYLAND_PROTOCOLS_DIR=$WAYLAND_PROTOCOLS_DIR
                     ]
                 )
             else
@@ -5311,23 +5376,34 @@ WITH_PLUGIN_SDL=0
 if test "$wxUSE_SOUND" = "yes"; then
   if test "$USE_UNIX" = 1 -a "$USE_MAC" != 1 ; then
     if test "$wxUSE_LIBSDL" != "no"; then
-      PKG_CHECK_MODULES([SDL], [sdl2 >= 2.0.0],
+      PKG_CHECK_MODULES([SDL], [sdl3 >= 3.0.0],
                   [
                     EXTRALIBS_SDL="$SDL_LIBS"
                     CFLAGS="$SDL_CFLAGS $CFLAGS"
                     CXXFLAGS="$SDL_CFLAGS $CXXFLAGS"
                     AC_DEFINE(wxUSE_LIBSDL)
+                    AC_DEFINE(wxUSE_LIBSDL3)
                   ],
                   [
-                    AC_MSG_NOTICE([SDL 2.0 not available. Falling back to 1.2.])
-                    AM_PATH_SDL([1.2.0],
+                    AC_MSG_NOTICE([SDL 3.0 not available. Falling back to SDL 2.0.])
+                    PKG_CHECK_MODULES([SDL], [sdl2 >= 2.0.0],
                                 [
                                   EXTRALIBS_SDL="$SDL_LIBS"
                                   CFLAGS="$SDL_CFLAGS $CFLAGS"
                                   CXXFLAGS="$SDL_CFLAGS $CXXFLAGS"
                                   AC_DEFINE(wxUSE_LIBSDL)
                                 ],
-                                [wxUSE_LIBSDL="no"])
+                                [
+                                  AC_MSG_NOTICE([SDL 2.0 not available. Falling back to 1.2.])
+                                  AM_PATH_SDL([1.2.0],
+                                              [
+                                                EXTRALIBS_SDL="$SDL_LIBS"
+                                                CFLAGS="$SDL_CFLAGS $CFLAGS"
+                                                CXXFLAGS="$SDL_CFLAGS $CXXFLAGS"
+                                                AC_DEFINE(wxUSE_LIBSDL)
+                                              ],
+                                              [wxUSE_LIBSDL="no"])
+                                ])
                   ])
       if test "$wxUSE_LIBSDL" = "yes" -a "$wxUSE_PLUGINS" = "yes" ; then
         WITH_PLUGIN_SDL=1
@@ -7322,10 +7398,6 @@ if test "$wxUSE_MSW" = 1 ; then
 
     if test "$wxUSE_TASKBARBUTTON" = "yes"; then
         AC_DEFINE(wxUSE_TASKBARBUTTON)
-    fi
-
-    if test "$wxUSE_UXTHEME" = "yes"; then
-        AC_DEFINE(wxUSE_UXTHEME)
     fi
 
 fi

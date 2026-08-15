@@ -414,6 +414,9 @@
     <ClCompile Include="..\..\src\common\stockitem.cpp">
       <Filter>Common Sources</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\common\svggc.cpp">
+      <Filter>Common Sources</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\common\taskbarcmn.cpp">
       <Filter>Common Sources</Filter>
     </ClCompile>
@@ -1039,6 +1042,9 @@
       <Filter>MSW Sources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\msw\taskbarbutton.cpp">
+      <Filter>MSW Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\msw\taskdlg.cpp">
       <Filter>MSW Sources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\msw\textctrl.cpp">
@@ -2216,6 +2222,9 @@
       <Filter>Common Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\wx\statusbr.h">
+      <Filter>Common Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\wx\svggc.h">
       <Filter>Common Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\wx\systhemectrl.h">

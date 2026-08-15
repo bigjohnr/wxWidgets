@@ -233,6 +233,12 @@
     <ClCompile Include="controls\slidertest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="net\ipc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="net\ipc_test_server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="net\socket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -309,6 +315,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="graphics\clippingbox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics\svgattributes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="graphics\coords.cpp">
