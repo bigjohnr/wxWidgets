@@ -18,6 +18,8 @@
 #include "wx/dynarray.h"
 #include "wx/bmpbndl.h"
 
+#include <unordered_map>
+
 #if wxUSE_RICHTOOLTIP
     #include "wx/richtooltip.h"
 #endif
@@ -137,12 +139,14 @@ public:
     virtual wxRibbonButtonBarButtonBase *GetItemById(int id) const;
     virtual int GetItemId(wxRibbonButtonBarButtonBase *button) const;
     virtual wxRect GetItemRect(int button_id) const;
+    virtual wxRect GetItemDropdownRect(int button_id) const;
 
 
     virtual bool Realize() override;
     virtual void ClearButtons();
     virtual bool DeleteButton(int button_id);
     virtual void EnableButton(int button_id, bool enable = true);
+    virtual bool GetButtonEnabled(int button_id) const;
     virtual void ToggleButton(int button_id, bool checked);
 
     virtual void SetButtonIcon(
@@ -175,6 +179,30 @@ public:
     // Get bitmap for button (DPI-aware resolution)
     wxBitmap GetButtonBitmap(int imageIndex, bool large) const;
 
+    // KeyTips (keyboard access mode).
+    void SetKeyTip(wxWindowID button_id, const wxString& keytip);
+    wxString GetKeyTip(wxWindowID button_id) const;
+
+    // Assigns a keytip to a hybrid button's dropdown arrow, separate
+    // from its main click area.
+    void SetDropdownKeyTip(wxWindowID button_id, const wxString& keytip);
+    wxString GetDropdownKeyTip(wxWindowID button_id) const;
+
+    // Implementation only: fires a button's click event for keytip
+    // activation. If dropdown is true, fires the dropdown-clicked event.
+    void ActivateButton(wxRibbonButtonBarButtonBase* button, bool dropdown = false);
+
+    bool HasFocusableItems() const override;
+    bool FocusFirstItem() override;
+    bool FocusLastItem() override;
+    bool FocusNextItem(bool forward) override;
+    void ClearFocusedItem() override;
+    void ActivateFocusedItem(bool dropdown = false) override;
+
+#if wxUSE_ACCESSIBILITY
+    virtual wxAccessible* CreateAccessible() override;
+#endif // wxUSE_ACCESSIBILITY
+
 #if wxUSE_RICHTOOLTIP
     void SetRichToolTipInfo( wxRibbonButtonBarButtonBase* tool, 
                              const wxRichToolTipInfo& richTipInfo );
@@ -188,6 +216,9 @@ public:
 
 protected:
     friend class wxRibbonButtonBarEvent;
+#if wxUSE_ACCESSIBILITY
+    friend class wxRibbonButtonBarAccessible;
+#endif // wxUSE_ACCESSIBILITY
     virtual wxSize DoGetBestSize() const override;
     wxBorder GetDefaultBorder() const override { return wxBORDER_NONE; }
 
@@ -216,10 +247,14 @@ protected:
         wxRibbonButtonBarButtonState size, wxReadOnlyDC& dc);
     virtual void UpdateWindowUI(long flags) override;
 
+    bool DoFocusButtonFrom(int pos, int step);
+    int DoGetFocusedButtonIndex() const;
+
     wxArrayRibbonButtonBarLayout m_layouts;
     wxArrayRibbonButtonBarButtonBase m_buttons;
     wxRibbonButtonBarButtonInstance* m_hovered_button = nullptr;
     wxRibbonButtonBarButtonInstance* m_active_button = nullptr;
+    wxRibbonButtonBarButtonBase* m_focused_button = nullptr;
 
     wxPoint m_layout_offset;
     wxSize m_bitmap_size_large;
@@ -236,6 +271,10 @@ protected:
 
 private:
     wxRibbonBar* m_ribbonBar = nullptr;
+    // The KeyTips are always stored in upper case, to allow case-insensitive
+    // matching.
+    std::unordered_map<wxWindowID, wxString> m_keyTips;
+    std::unordered_map<wxWindowID, wxString> m_dropdownKeyTips;
 
 
 #ifndef SWIG

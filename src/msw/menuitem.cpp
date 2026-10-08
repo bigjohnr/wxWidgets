@@ -104,7 +104,7 @@ public:
         {
             rect.top += cyTopHeight;
             rect.left += cxLeftWidth;
-            rect.right -= cyTopHeight;
+            rect.right -= cxRightWidth;
             rect.bottom -= cyBottomHeight;
         }
 
@@ -112,7 +112,7 @@ public:
         {
             rect.top -= cyTopHeight;
             rect.left -= cxLeftWidth;
-            rect.right += cyTopHeight;
+            rect.right += cxRightWidth;
             rect.bottom += cyBottomHeight;
         }
     };
@@ -1084,9 +1084,7 @@ bool wxMenuItem::OnDrawItem(wxDC& dc, const wxRect& rc,
             {
                 // we need to grey out the bitmap as we don't have any specific
                 // disabled bitmap
-                wxImage imgGrey = bmp.ConvertToImage().ConvertToGreyscale();
-                if ( imgGrey.IsOk() )
-                    bmp = wxBitmap(imgGrey);
+                wxBitmap::MakeDisabled(bmp);
             }
 #endif // wxUSE_IMAGE
         }

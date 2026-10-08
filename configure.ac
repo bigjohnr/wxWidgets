@@ -544,9 +544,10 @@ WX_ARG_WITHOUT(gtkprint,   [  --without-gtkprint      don't use GTK printing sup
 WX_ARG_WITHOUT(wayland,    [  --without-wayland       don't use Wayland-specific code], wxUSE_WAYLAND)
 WX_ARG_WITH(gnomevfs,      [  --with-gnomevfs         use GNOME VFS for associating MIME types], wxUSE_LIBGNOMEVFS)
 WX_ARG_WITH(libnotify,     [  --with-libnotify        use libnotify for notifications], wxUSE_LIBNOTIFY)
+WX_ARG_WITH(appindicator,  [  --with-appindicator     use AppIndicator (required for wxTaskBarIcon under Wayland)], wxUSE_APPINDICATOR)
 WX_ARG_WITH(opengl,        [  --with-opengl           use OpenGL (or Mesa)], wxUSE_OPENGL)
 WX_ARG_WITH(xtest,         [  --with-xtest            use XTest extension], wxUSE_XTEST)
-WX_ARG_WITH(nanosvg,       [  --with-nanosvg          use NanoSVG for rasterizing SVG], wxUSE_NANOSVG)
+WX_ARG_SYS_WITH(nanosvg,   [  --with-nanosvg          use NanoSVG for rasterizing SVG], wxUSE_NANOSVG)
 WX_ARG_WITH(lunasvg,       [  --with-lunasvg          use LunaSVG for rasterizing SVG], wxUSE_LUNASVG)
 
 if test "$wxUSE_GTK" = 1 -o "$wxUSE_X11" = 1; then
@@ -1763,7 +1764,9 @@ if test -n "$LARGEFILE_CPPFLAGS"; then
     fi
 fi
 
-dnl AC_FUNC_FSEEKO sets HAVE_FSEEKO and $ac_cv_sys_largefile_source
+dnl AC_FUNC_FSEEKO sets HAVE_FSEEKO and indicates whether _LARGEFILE_SOURCE is
+dnl needed for fseeko() via $ac_cv_sys_largefile_source in autoconf < 2.72 or
+dnl $ac_cv_func_fseeko_ftello in later versions
 dnl
 dnl it may be affected by large file flags (this happens under HP-UX 11 for
 dnl example) so set them before using it and also use C++ to ensure that we get
@@ -1774,8 +1777,9 @@ CPPFLAGS="$CPPFLAGS $LARGEFILE_CPPFLAGS"
 AC_FUNC_FSEEKO
 CPPFLAGS="$old_CPPFLAGS"
 AC_LANG_POP()
-if test "$ac_cv_sys_largefile_source" != no; then
-    WXCONFIG_CPPFLAGS="$WXCONFIG_CPPFLAGS -D_LARGEFILE_SOURCE=$ac_cv_sys_largefile_source"
+if test "$ac_cv_sys_largefile_source" = 1 || \
+   test "$ac_cv_func_fseeko_ftello" = "need _LARGEFILE_SOURCE"; then
+    WXCONFIG_CPPFLAGS="$WXCONFIG_CPPFLAGS -D_LARGEFILE_SOURCE=1"
 fi
 
 AC_C_BIGENDIAN
@@ -2766,8 +2770,35 @@ dnl ------------------------------------------------------------------------
 dnl Check for NanoSVG libraries
 dnl ------------------------------------------------------------------------
 
-if test "$wxUSE_NANOSVG" = "yes"; then
+NANOSVG_LINK=
+if test "$wxUSE_NANOSVG" != "no" ; then
     AC_DEFINE(wxUSE_NANOSVG)
+
+    if test "$wxUSE_NANOSVG" = "sys" -o "$wxUSE_NANOSVG" = "yes" ; then
+        dnl NanoSVG doesn't provide a pkg-config file, so just check for its
+        dnl header, which the system packages providing it (e.g. Debian,
+        dnl Fedora) install into a "nanosvg" subdirectory.
+        AC_CHECK_HEADER([nanosvg/nanosvg.h], [wx_found_nanosvg=yes],
+                        [wx_found_nanosvg=no], [ ])
+
+        if test "$wx_found_nanosvg" = "yes" ; then
+            wxUSE_NANOSVG=sys
+            AC_DEFINE(wxUSE_NANOSVG_EXTERNAL)
+
+            dnl Some distributions (e.g. Fedora) also build NanoSVG as a shared
+            dnl library: link with it if available, otherwise compile the
+            dnl header-only implementation into wxWidgets itself.
+            AC_CHECK_LIB(nanosvgrast, nsvgCreateRasterizer,
+                         [NANOSVG_LINK="-lnanosvgrast -lnanosvg"],
+                         [CXXFLAGS="$CXXFLAGS -DwxUSE_NANOSVG_EXTERNAL_ENABLE_IMPL"],
+                         [-lnanosvg -lm])
+        elif test "$wxUSE_NANOSVG" = "sys" ; then
+            AC_MSG_ERROR([system NanoSVG library not found! Use --with-nanosvg=builtin to use built-in version])
+        else
+            AC_MSG_WARN([system NanoSVG library not found, will use built-in instead])
+            wxUSE_NANOSVG=builtin
+        fi
+    fi
 fi
 
 dnl ------------------------------------------------------------------------
@@ -3100,54 +3131,24 @@ installed, where VER is 2, 3 or 4.
             fi
 
             if test -n "$WAYLAND_SCANNER" ; then
-                dnl Check if we can use the session management protocol which
-                dnl normally requires GTK >= 3.24.53 but allow using it with
-                dnl the versions of 3.24.52 that already have the support
-                dnl required for it, at least until 3.24.53 is released.
-                AC_CACHE_CHECK([for support of the Wayland session management protocol],
-                    wx_cv_gtk_wayland_sm,
+                dnl wayland-protocols is normally a dependency of
+                dnl libgtk-3-dev or similar, but it's not always pulled in
+                dnl automatically, so still check that it's really there.
+                AC_CACHE_CHECK([for wayland-protocols data directory],
+                    wx_cv_wayland_protocols_dir,
                     [
-                        GTK_VERSION=`$PKG_CONFIG --modversion gtk+-3.0`
-                        AS_VERSION_COMPARE([$GTK_VERSION], [3.24.52],
-                            wx_cv_gtk_wayland_sm=no,
-                            wx_cv_gtk_wayland_sm=maybe,
-                            wx_cv_gtk_wayland_sm=yes
-                        )
-
-                        if test "$wx_cv_gtk_wayland_sm" = "maybe"; then
-                            save_CFLAGS=$CFLAGS
-                            save_LIBS=$LIBS
-                            CFLAGS="$CFLAGS $TOOLKIT_INCLUDE"
-                            LIBS="$LIBS $GUI_TK_LIBRARY"
-                            AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <gdk/gdkwayland.h>],
-                                [
-                                    gdk_wayland_window_get_xdg_toplevel(0)
-                                ])],
-                                wx_cv_gtk_wayland_sm=yes,
-                                wx_cv_gtk_wayland_sm=no
-                            )
-                            LIBS=$save_LIBS
-                            CFLAGS=$save_CFLAGS
-                        fi
+                        wx_cv_wayland_protocols_dir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols 2>/dev/null`
                     ]
                 )
+                WAYLAND_PROTOCOLS_DIR=$wx_cv_wayland_protocols_dir
 
-                if test "$wx_cv_gtk_wayland_sm" = "yes"; then
-                    dnl We don't check for wayland-protocols being installed as
-                    dnl it's a dependency of libgtk-3-dev or similar, and so
-                    dnl should be available.
-                    AC_CACHE_CHECK([for wayland-protocols data directory],
-                        wx_cv_wayland_protocols_dir,
-                        [
-                            wx_cv_wayland_protocols_dir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
-                        ]
-                    )
-                    WAYLAND_PROTOCOLS_DIR=$wx_cv_wayland_protocols_dir
-
+                if test -n "$WAYLAND_PROTOCOLS_DIR" -a \
+                        -f "$WAYLAND_PROTOCOLS_DIR/stable/xdg-shell/xdg-shell.xml"; then
                     AC_DEFINE(wxHAVE_WAYLAND_SESSION_MANAGEMENT)
+                    AC_DEFINE(wxHAVE_WAYLAND_TOPLEVEL_DRAG)
                 else
-                    dnl Don't bother running wayland-scanner for this protocol.
-                    WAYLAND_SM_SUPPORT=':'
+                    AC_MSG_WARN([wayland-protocols package not found, Wayland-specific functionality will be disabled])
+                    WAYLAND_XDG_SUPPORT=':'
                 fi
 
                 AC_DEFINE(wxHAVE_WAYLAND_CLIENT)
@@ -3156,19 +3157,43 @@ installed, where VER is 2, 3 or 4.
                         mkdir -p lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols
                         $WAYLAND_SCANNER client-header $srcdir/src/unix/protocols/pointer-warp-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/pointer-warp-v1-client-protocol.h
                         $WAYLAND_SCANNER private-code $srcdir/src/unix/protocols/pointer-warp-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/pointer-warp-v1-client-protocol.c
-                        $WAYLAND_SM_SUPPORT $WAYLAND_SCANNER client-header $srcdir/src/unix/protocols/xdg-session-management-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-session-management-v1-client-protocol.h
-                        $WAYLAND_SM_SUPPORT $WAYLAND_SCANNER private-code $srcdir/src/unix/protocols/xdg-session-management-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-session-management-v1-client-protocol.c
-                        $WAYLAND_SM_SUPPORT $WAYLAND_SCANNER client-header $WAYLAND_PROTOCOLS_DIR/stable/xdg-shell/xdg-shell.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-shell-client-protocol.h
-                        $WAYLAND_SM_SUPPORT $WAYLAND_SCANNER private-code $WAYLAND_PROTOCOLS_DIR/stable/xdg-shell/xdg-shell.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-shell-client-protocol.c
+                        $WAYLAND_XDG_SUPPORT $WAYLAND_SCANNER client-header $srcdir/src/unix/protocols/xdg-session-management-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-session-management-v1-client-protocol.h
+                        $WAYLAND_XDG_SUPPORT $WAYLAND_SCANNER private-code $srcdir/src/unix/protocols/xdg-session-management-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-session-management-v1-client-protocol.c
+                        $WAYLAND_XDG_SUPPORT $WAYLAND_SCANNER client-header $WAYLAND_PROTOCOLS_DIR/stable/xdg-shell/xdg-shell.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-shell-client-protocol.h
+                        $WAYLAND_XDG_SUPPORT $WAYLAND_SCANNER private-code $WAYLAND_PROTOCOLS_DIR/stable/xdg-shell/xdg-shell.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-shell-client-protocol.c
+                        $WAYLAND_XDG_SUPPORT $WAYLAND_SCANNER client-header $srcdir/src/unix/protocols/xdg-toplevel-drag-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-toplevel-drag-v1-client-protocol.h
+                        $WAYLAND_XDG_SUPPORT $WAYLAND_SCANNER private-code $srcdir/src/unix/protocols/xdg-toplevel-drag-v1.xml lib/wx/include/${TOOLCHAIN_FULLNAME}/wx/protocols/xdg-toplevel-drag-v1-client-protocol.c
                     ],
                     [
                         WAYLAND_SCANNER=$WAYLAND_SCANNER
-                        WAYLAND_SM_SUPPORT=$WAYLAND_SM_SUPPORT
+                        WAYLAND_XDG_SUPPORT=$WAYLAND_XDG_SUPPORT
                         WAYLAND_PROTOCOLS_DIR=$WAYLAND_PROTOCOLS_DIR
                     ]
                 )
             else
                 AC_MSG_WARN([Wayland-specific code will be disabled])
+            fi
+        fi
+
+        if test "$wxUSE_TASKBARICON" = "yes"; then
+            if test "$wxUSE_APPINDICATOR" = "yes"; then
+                if test "$WXGTK3" = 1; then
+                    PKG_CHECK_MODULES(APPINDICATOR,
+                        [ayatana-appindicator3-0.1],
+                        [
+                            GUI_TK_LIBRARY="$GUI_TK_LIBRARY $APPINDICATOR_LIBS"
+                            CFLAGS="$APPINDICATOR_CFLAGS $CFLAGS"
+                            CXXFLAGS="$APPINDICATOR_CFLAGS $CXXFLAGS"
+                            AC_DEFINE(wxUSE_APPINDICATOR)
+                        ],
+                        [
+                            AC_MSG_WARN([libayatana-appindicator not found; wxTaskBarIcon won't work under Wayland])
+                        ])
+                else
+                    dnl In principle, we could look for ayatana-appindicator-0.1
+                    dnl when using GTK2, but for now we don't support it there.
+                    wxUSE_APPINDICATOR=no
+                fi
             fi
         fi
     fi
@@ -7664,10 +7689,6 @@ if test "$wxUSE_STC" = "yes" ; then
     for lib in scintilla lexilla; do
         WXCONFIG_STC_LIBS="$WXCONFIG_STC_LIBS -lwx${lib}${WX_LIB_FLAVOUR}-${WX_RELEASE}${HOST_SUFFIX}"
     done
-
-    if test "$wxUSE_MSW" = 1 ; then
-        EXTRALIBS_STC="-limm32"
-    fi
 fi
 
 dnl ---------------------------------------------------------------------------
@@ -7924,7 +7945,7 @@ EXTRALIBS_XML="$EXPAT_LINK"
 EXTRALIBS_HTML="$MSPACK_LINK"
 EXTRALIBS_MEDIA="$GST_LIBS"
 if test "$wxUSE_GUI" = "yes"; then
-    EXTRALIBS_GUI=`echo $GUI_TK_LIBRARY $SDL_LIBS $PNG_LINK $JPEG_LINK $TIFF_LINK $LZMA_LINK $JBIG_LINK $WEBP_LINK $WEBKIT_LINK`
+    EXTRALIBS_GUI=`echo $GUI_TK_LIBRARY $SDL_LIBS $PNG_LINK $JPEG_LINK $TIFF_LINK $LZMA_LINK $JBIG_LINK $WEBP_LINK $NANOSVG_LINK $WEBKIT_LINK`
 fi
 if test "$wxUSE_OPENGL" = "yes"; then
     EXTRALIBS_OPENGL="$LDFLAGS_GL $OPENGL_LIBS"
@@ -7974,6 +7995,9 @@ if test "$wxUSE_GUI" = "yes"; then
             WXCONFIG_LIBS="$WEBP_LINK $WXCONFIG_LIBS"
             ;;
     esac
+    if test "$wxUSE_NANOSVG" = "sys" -a -n "$NANOSVG_LINK" ; then
+        WXCONFIG_LIBS="$NANOSVG_LINK $WXCONFIG_LIBS"
+    fi
 fi
 case "$wxUSE_REGEX" in
     builtin)
@@ -8573,6 +8597,7 @@ echo "                                       png                ${wxUSE_LIBPNG-n
 echo "                                       regex              ${wxUSE_REGEX}"
 echo "                                       tiff               ${wxUSE_LIBTIFF-none}"
 echo "                                       webp               ${wxUSE_LIBWEBP-none}"
+echo "                                       nanosvg            ${wxUSE_NANOSVG-none}"
 if test "$wxUSE_X11" = 1; then
 echo "                                       xpm                ${wxUSE_LIBXPM-none}"
 fi

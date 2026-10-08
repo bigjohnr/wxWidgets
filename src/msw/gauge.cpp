@@ -102,14 +102,15 @@ void wxGauge::MSWGetDarkModeSupport(MSWDarkModeSupport& support) const
     {
         support.themeName = L"DarkMode_DarkTheme";
         support.themeId = L"Progress";
+        support.isLightModeThemed = false;
     }
     else
         wxGaugeBase::MSWGetDarkModeSupport(support);
 }
 
-void wxGauge::MSWSetDarkOrLightMode(SetMode setmode)
+void wxGauge::MSWSetDarkOrLightMode()
 {
-    wxGaugeBase::MSWSetDarkOrLightMode(setmode);
+    wxGaugeBase::MSWSetDarkOrLightMode();
 
     // Adjust colours unless we use DarkMode_DarkTheme in
     // MSWGetDarkModeSupport().

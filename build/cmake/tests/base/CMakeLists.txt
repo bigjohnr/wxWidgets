@@ -55,6 +55,7 @@ set(TEST_SRC
     net/ipc_test_server.cpp
     net/socket.cpp
     net/webrequest.cpp
+    net/webrequest_local.cpp
     regex/regextest.cpp
     regex/wxregextest.cpp
     scopeguard/scopeguardtest.cpp
@@ -122,7 +123,9 @@ set(TEST_DATA
     testdata.conf
     )
 
-wx_add_test(test_base CONSOLE ${TEST_SRC}
+# Register test_base through Catch to get one CTest entry per Catch test case
+# instead of the default aggregate executable test.
+wx_add_test(test_base CONSOLE NO_CTEST ${TEST_SRC}
     DATA ${TEST_DATA}
     )
 target_compile_definitions(test_base PRIVATE TEST_HAS_IPC_SERVER)
@@ -132,3 +135,18 @@ endif()
 if(wxUSE_XML)
     wx_exe_link_libraries(test_base wxxml)
 endif()
+
+include("${wxSOURCE_DIR}/3rdparty/catch/contrib/Catch.cmake")
+catch_discover_tests(test_base
+    TEST_SPEC "~[.]" "~[ipc]"
+    TEST_LIST test_base_NON_IPC_TESTS
+    WORKING_DIRECTORY "${wxOUTPUT_DIR}/${wxPLATFORM_LIB_DIR}"
+    )
+catch_discover_tests(test_base
+    TEST_SPEC "~[.]" "[ipc]"
+    TEST_LIST test_base_IPC_TESTS
+    PROPERTIES
+        RESOURCE_LOCK test_base_ipc
+        TIMEOUT 180
+    WORKING_DIRECTORY "${wxOUTPUT_DIR}/${wxPLATFORM_LIB_DIR}"
+    )
