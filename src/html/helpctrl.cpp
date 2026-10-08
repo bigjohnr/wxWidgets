@@ -406,7 +406,8 @@ bool wxHtmlHelpController::Display(const wxString& x)
 {
     CreateHelpWindow();
     bool success = m_helpWindow->Display(x);
-    MakeModalIfNeeded();
+    if ( success )
+        MakeModalIfNeeded();
     return success;
 }
 
@@ -414,7 +415,8 @@ bool wxHtmlHelpController::Display(int id)
 {
     CreateHelpWindow();
     bool success = m_helpWindow->Display(id);
-    MakeModalIfNeeded();
+    if ( success )
+        MakeModalIfNeeded();
     return success;
 }
 
@@ -422,7 +424,8 @@ bool wxHtmlHelpController::DisplayContents()
 {
     CreateHelpWindow();
     bool success = m_helpWindow->DisplayContents();
-    MakeModalIfNeeded();
+    if ( success )
+        MakeModalIfNeeded();
     return success;
 }
 
@@ -430,7 +433,8 @@ bool wxHtmlHelpController::DisplayIndex()
 {
     CreateHelpWindow();
     bool success = m_helpWindow->DisplayIndex();
-    MakeModalIfNeeded();
+    if ( success )
+        MakeModalIfNeeded();
     return success;
 }
 
@@ -439,7 +443,8 @@ bool wxHtmlHelpController::KeywordSearch(const wxString& keyword,
 {
     CreateHelpWindow();
     bool success = m_helpWindow->KeywordSearch(keyword, mode);
-    MakeModalIfNeeded();
+    if ( success )
+        MakeModalIfNeeded();
     return success;
 }
 

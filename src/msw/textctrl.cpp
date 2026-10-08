@@ -2120,9 +2120,8 @@ bool wxTextCtrl::MSWShouldPreProcessMessage(WXMSG* msg)
         }
     }
 
-    // Delegate all the other checks to the base classes.
-    return wxTextEntry::MSWShouldPreProcessMessage(msg) &&
-                wxControl::MSWShouldPreProcessMessage(msg);
+    // Delegate all the other checks to the base class.
+    return wxControl::MSWShouldPreProcessMessage(msg);
 }
 
 void wxTextCtrl::OnChar(wxKeyEvent& event)
@@ -2684,7 +2683,8 @@ bool wxTextCtrl::AcceptsFocusFromKeyboard() const
     // we don't want focus if we can't be edited unless we're a multiline
     // control because then it might be still nice to get focus from keyboard
     // to be able to scroll it without mouse
-    return (IsEditable() || IsMultiLine()) && wxControl::AcceptsFocus();
+    return (IsEditable() || IsMultiLine() || m_enableFocusFromKbd) &&
+            wxControl::AcceptsFocus();
 }
 
 wxSize wxTextCtrl::DoGetBestSize() const
@@ -2857,6 +2857,14 @@ void wxTextCtrl::OnSetFocus(wxFocusEvent& event)
     event.Skip();
 }
 
+bool wxTextCtrl::MSWShouldDrawDarkThemeBorder() const
+{
+    // We need to draw the border for rich edit and when we are not using
+    // DarkMode_DarkTheme. The non-rich control draws a good themed border
+    // with DarkMode_DarkTheme.
+    return IsRich() || !wxMSWDarkMode::HasDarkTheme();
+}
+
 void wxTextCtrl::MSWDrawThemeBorder(WXHDC hdc)
 {
     if ( IsRich() )
@@ -2979,9 +2987,17 @@ void wxTextCtrl::MSWSetRichZoom()
 
 #endif // wxUSE_RICHEDIT
 
-void wxTextCtrl::MSWSetDarkOrLightMode(SetMode setmode)
+void wxTextCtrl::MSWGetDarkModeSupport(MSWDarkModeSupport& support) const
 {
-    wxTextCtrlBase::MSWSetDarkOrLightMode(setmode);
+    if ( wxMSWDarkMode::HasDarkTheme() )
+        support.themeName = L"DarkMode_DarkTheme";
+    else
+        wxTextCtrlBase::MSWGetDarkModeSupport(support);
+}
+
+void wxTextCtrl::MSWSetDarkOrLightMode()
+{
+    wxTextCtrlBase::MSWSetDarkOrLightMode();
 
     // Update the background for non-rich read-only multiline, unless there
     // are custom colours. The foreground is updated by
@@ -3003,7 +3019,7 @@ void wxTextCtrl::MSWSetDarkOrLightMode(SetMode setmode)
         // True if we need to update the background colour.
         bool setBackground = false;
 
-        if ( setmode == SetMode::Change )
+        if ( wxMSWDarkMode::HasChanged() )
         {
             // Get formatting info for all the text.
             long sel1, sel2;

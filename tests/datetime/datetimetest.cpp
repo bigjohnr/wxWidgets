@@ -833,6 +833,14 @@ TEST_CASE("wxDateTime::ParseFormat", "[datetime]")
         CHECK( dt.GetDay() == 17 );
         CHECK( dt.GetMonth() == wxDateTime::Sep );
         CHECK( dt.GetYear() == 2008 );
+
+        wxDateTime dtLeapDef(29, wxDateTime::Feb, 2012);
+        CHECK( !dt.ParseFormat("2011", "%Y", dtLeapDef) );
+
+        REQUIRE( dt.ParseFormat("2016", "%Y", dtLeapDef) );
+        CHECK( dt.GetDay() == 29 );
+        CHECK( dt.GetMonth() == wxDateTime::Feb );
+        CHECK( dt.GetYear() == 2016 );
     }
 
     // test some degenerate cases
@@ -1031,6 +1039,17 @@ TEST_CASE("wxDateTime::Ticks", "[datetime]")
         wxInt64 ticks = (dt.GetValue() / 1000).GetValue();
         CHECK( d.gmticks == ticks );
     }
+}
+
+TEST_CASE("wxDateTime::DOS", "[datetime]")
+{
+    CHECK( wxDateTime(1, wxDateTime::Jan, 1980).GetAsDOS() == 0x00210000UL );
+
+    const wxDateTime dt(8, wxDateTime::Apr, 2079, 13, 24, 58);
+    CHECK( dt.GetAsDOS() == 0xC6886B1DUL );
+
+    const wxDateTime dtMax(31, wxDateTime::Dec, 2107, 23, 59, 58);
+    CHECK( dtMax.GetAsDOS() == 0xFF9FBF7DUL );
 }
 
 // test parsing dates in RFC822 format

@@ -327,6 +327,16 @@ public:
                         wxRibbonBar* wnd,
                         const wxRect& rect) = 0;
 
+    // This one is not pure virtual for compatibility with the existing art
+    // providers: it returns false if it is not implemented, in which case a
+    // default key tip badge is drawn by the caller.
+    virtual bool DrawKeyTip(
+                        wxDC& WXUNUSED(dc),
+                        wxWindow* WXUNUSED(wnd),
+                        const wxRect& WXUNUSED(rect),
+                        const wxString& WXUNUSED(keytip))
+                        { return false; }
+
     virtual void GetBarTabWidth(
                         wxReadOnlyDC& dc,
                         wxWindow* wnd,
@@ -425,6 +435,9 @@ public:
 class WXDLLIMPEXP_RIBBON wxRibbonMSWArtProvider : public wxRibbonArtProvider
 {
 public:
+    // Derived classes overriding SetColourScheme() should pass false here and
+    // set their own colour scheme in their constructor, as the scheme set from
+    // here can't use the overridden version of SetColourScheme().
     wxRibbonMSWArtProvider(bool set_colour_scheme = true);
     virtual ~wxRibbonMSWArtProvider();
 
@@ -543,6 +556,12 @@ public:
                         wxRibbonBar* wnd,
                         const wxRect& rect) override;
 
+    bool DrawKeyTip(
+                    wxDC& dc,
+                    wxWindow* wnd,
+                    const wxRect& rect,
+                    const wxString& keytip) override;
+
     void GetBarTabWidth(
                         wxReadOnlyDC& dc,
                         wxWindow* wnd,
@@ -633,6 +652,11 @@ public:
     wxRect GetRibbonHelpButtonArea(const wxRect& rect) override;
 
 protected:
+    // Colour scheme used by default, see UpdateColoursFromSystem().
+    static void GetDefaultColourScheme(wxColour& primary,
+                                       wxColour& secondary,
+                                       wxColour& tertiary);
+
     void ReallyDrawTabSeparator(wxWindow* wnd, const wxRect& rect, double visibility);
     void DrawPartialPageBackground(wxDC& dc, wxWindow* wnd, const wxRect& rect,
         bool allow_hovered = true);

@@ -24,7 +24,6 @@
 #include "wx/uri.h"
 #include "wx/wfstream.h"
 
-#include "wx/private/make_unique.h"
 
 #include <memory>
 #include <string>
@@ -269,7 +268,7 @@ protected:
             };
 
             if ( debug == "1" )
-                GetSession().SetDebugLogger(std::make_unique<DebugLogger>());
+                GetSession().SetDebugLogger(make_unique<DebugLogger>());
             else
                 WARN("Unknown WX_TEST_WEBREQUEST_DEBUG value: " << debug);
         }
@@ -493,10 +492,10 @@ TEST_CASE_METHOD(RequestFixture,
 
     Create("status/200");
     CHECK( request.IsOk() );
-    CHECK( session.GetNativeHandle() );
 
     // Note that the request must be started to have a valid native handle.
     request.Start();
+    CHECK( session.GetNativeHandle() );
     CHECK( request.GetNativeHandle() );
     RunLoopWithTimeout();
     CHECK( request.GetState() == wxWebRequest::State_Completed );
@@ -693,7 +692,7 @@ TEST_CASE_METHOD(RequestFixture,
         return;
 
     Create("put");
-    std::unique_ptr<wxInputStream> is(new wxFileInputStream("horse.png"));
+    auto is = make_unique<wxFileInputStream>("horse.png");
     REQUIRE( is->IsOk() );
 
     request.SetData(is.release(), "image/png");
@@ -1211,7 +1210,7 @@ TEST_CASE_METHOD(SyncRequestFixture,
         return;
 
     Create("put");
-    std::unique_ptr<wxInputStream> is(new wxFileInputStream("horse.png"));
+    auto is = make_unique<wxFileInputStream>("horse.png");
     REQUIRE( is->IsOk() );
 
     request.SetData(is.release(), "image/png");

@@ -36,7 +36,9 @@
     #include "wx/mstream.h"
 #endif // wxHAS_DRAW_TITLE_BAR_BITMAP
 
+#ifndef wxOSX_USE_NSCELL_RENDERER
 #define wxOSX_USE_NSCELL_RENDERER 1
+#endif
 
 // check if we're having a CGContext we can draw into
 inline bool wxHasCGContext(wxWindow* WXUNUSED(win), wxDC& dc)
@@ -786,13 +788,25 @@ void wxRendererMac::DrawMacHeaderCell(wxWindow *win,
                 default:
                     cell.alignment = NSTextAlignmentLeft;
             }
-
         }
         else
         {
             cell.title = @("");
             cell.alignment = NSTextAlignmentLeft;
         }
+
+        // In its default "off" state NSTableHeaderCell draws an opaque
+        // plate behind the label: white in light mode, where this matches
+        // the native table header appearance, but pure black in dark mode,
+        // where native headers use a dark gray instead. Use the "mixed"
+        // state in dark mode, which draws the label with the standard dark
+        // header background ("on" currently draws the same, but "mixed" is
+        // the neutral choice between them), and keep the default in light
+        // mode.
+        if ( wxSystemSettings::GetAppearance().IsDark() )
+            cell.state = NSControlStateValueMixed;
+        else
+            cell.state = NSControlStateValueOff;
 
         wxGCDCImpl *impl = (wxGCDCImpl*) dc.GetImpl();
         CGContextRef cgContext = (CGContextRef) impl->GetGraphicsContext()->GetNativeContext();
